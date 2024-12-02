@@ -1,0 +1,25 @@
+# Build directory
+build/
+
+# CMake build files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# Compiled files
+*.a
+*.o
+*.obj
+*.exe
+*.out
+*.app
+
+# IDE-specific files
+.vscode/
+.idea/
+*.swp
+*~
+
+# CUDA-specific
+*.ptx
