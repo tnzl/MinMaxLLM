@@ -1,14 +1,14 @@
-Steps to setup environment: 
-0. Install Visual Studio 2022 
-1. conda create -n mmllm python=3.13 -y
-2. conda activate mmllm
-3. conda install cmake -y
+## Get Started
+#### Steps to build: 
+0. Install Visual Studio 2022 (Community Edition) or later.
+1. run build.ps1
+2. Run the application from build folder.
 
-Steps to build: 
-1. Setup environment
-2. mkdir build
-3. cd build
-4. cmake ..
-5. cmake --build .
-6. Run the application from build folder.
-
+## Next TODOs
+1. Implement GQA (Grouped Query Attention)
+    i. functional modular GQA 
+    ii. optimise using avx2
+2. Implement Layer Normalization
+3. Implement RMS normalization
+4. Implement Softmax function
+5. Write auto regressive QWEN3 model
