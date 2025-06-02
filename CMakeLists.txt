@@ -25,11 +25,16 @@ endif()
 # Create a library for your CPU operations
 add_library(cpu_ops STATIC
     src/cpu_ops/matmul.cpp
+    src/cpu_ops/rotary_embedding.cpp
 )
 
 # Add executable and link the library
 add_executable(test_matmul
     tests/cpu_ops/test_matmul.cpp
 )
+add_executable(test_rotary_embedding
+    tests/cpu_ops/test_rotary_embedding.cpp
+)
 
 target_link_libraries(test_matmul cpu_ops)
+target_link_libraries(test_rotary_embedding cpu_ops)
