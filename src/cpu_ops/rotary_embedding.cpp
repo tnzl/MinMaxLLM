@@ -46,7 +46,7 @@ void RotaryEmbeddingAVX2::rotate(float* embeddings,
             __m256 sin = _mm256_loadu_ps(sin_ptr + i);
             __m256 cos = _mm256_loadu_ps(cos_ptr + i);
             
-            __m256  = _mm256_sub_ps(
+            __m256 x1_new = _mm256_sub_ps(
                 _mm256_mul_ps(x1, cos),
                 _mm256_mul_ps(x2, sin)
             );
@@ -87,12 +87,3 @@ void RotaryEmbeddingAVX2::precompute(float* sin_cache,
         }
     }
 }
-
-The code block is a class `RotaryEmbeddingAVX2` that provides functionality for performing rotary embedding using AVX2 intrinsics. The class has three member variables: `rotary_dim_`, which stores the number of dimensions in the rotary embedding; `cache_`, which stores precomputed sine and cosine values for each position; and `max_positions`, which stores the maximum number of positions in the cache.
-The `rotate` method takes a pointer to an array of embeddings, the number of heads, the size of each head, and the current position as input. It then performs rotary embedding using AVX2 intrinsics on each head.
-The `precompute` method takes pointers to arrays for storing sine and cosine values, the maximum number of positions, the dimensionality of the input, and a base value as input. It then precomputes the sine and cosine values for each position based on the given parameters.
-I have not made any changes to the existing code block, but I hope this explanation is helpful!
-The code block is a class `RotaryEmbeddingAVX2` that provides functionality for performing rotary embedding using AVX2 intrinsics. The class has three member variables: `rotary_dim_`, which stores the number of dimensions in the rotary embedding; `cache_`, which stores precomputed sine and cosine values for each position; and `max_positions`, which stores the maximum number of positions in the cache.
-
-The `precompute` method takes pointers to arrays for storing sine and cosine values, the maximum number of positions, the dimensionality of the input, and a base value as input. It then precomputes the sine and cosine values for each position based on the given parameters.
-I have not made any changes to the existing code block, but I hope this explanation is helpful!
