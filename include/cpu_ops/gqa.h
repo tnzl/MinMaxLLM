@@ -3,6 +3,7 @@
 #include <immintrin.h>
 #include <cmath>
 #include <algorithm>
+#include <cpu_ops/exp_avx2.h>
 
 class GroupQueryAttention {
 private:
@@ -14,9 +15,6 @@ private:
 
     // Helper function for AVX2 softmax
     void softmax(float* arr, int size);
-
-    // Fast exp approximation using AVX2
-    __m256 exp256_ps(__m256 x);
 
 public:
     GroupQueryAttention(int num_heads, int kv_num_heads, int head_dim, float scale = -1.0f);
