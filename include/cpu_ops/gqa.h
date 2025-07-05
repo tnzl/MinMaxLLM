@@ -4,6 +4,7 @@
 #include <cmath>
 #include <algorithm>
 #include <cpu_ops/exp_avx2.h>
+#include <cpu_ops/softmax_avx2.h>
 
 /**
  * @class GroupQueryAttention
@@ -19,13 +20,6 @@ private:
     int head_dim;           // Dimension of each head
     float scale;            // Scaling factor (1/sqrt(head_dim))
     int seq_len;           // Sequence length
-
-    /**
-     * @brief Computes softmax over the input array using AVX2.
-     * @param arr Pointer to the input array (modified in-place)
-     * @param size Number of elements in the array
-     */
-    void softmax(float* arr, int size);
 
 public:
     /**

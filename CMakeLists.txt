@@ -29,6 +29,7 @@ add_library(cpu_ops STATIC
     src/cpu_ops/gqa.cpp
     src/cpu_ops/SkipSimplifiedLayerNormalization_AVX2.cpp
     src/cpu_ops/silu_avx2.cpp
+    src/cpu_ops/softmax_avx2.cpp # Added softmax AVX2 operator
 )
 
 # Add executable and link the library
@@ -47,9 +48,13 @@ add_executable(test_SkipSimplifiedLayerNormalization_AVX2
 add_executable(test_silu_avx2
     tests/cpu_ops/test_silu_avx2.cpp
 )
+add_executable(test_softmax_avx2
+    tests/cpu_ops/test_softmax_avx2.cpp
+)
 
 target_link_libraries(test_matmul cpu_ops)
 target_link_libraries(test_rotary_embedding cpu_ops)
 target_link_libraries(test_gqa cpu_ops)
 target_link_libraries(test_SkipSimplifiedLayerNormalization_AVX2 cpu_ops)
 target_link_libraries(test_silu_avx2 cpu_ops)
+target_link_libraries(test_softmax_avx2 cpu_ops)
