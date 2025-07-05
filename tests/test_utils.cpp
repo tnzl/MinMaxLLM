@@ -1,4 +1,3 @@
-// #include "test_util.h"
 #include <iostream>
 #include <algorithm>
 #include <numeric>
@@ -91,4 +90,29 @@ void printErrorAnalysis(float* C1, float* C2, int M, int N) {
     std::cout << "Elements with error > " << significant_error_threshold << ": " 
               << significant_errors << " (" 
               << (100.0f * significant_errors) / (M * N) << "%)\n";
+}
+
+void printErrorAnalysis1D(const float* ref, const float* actual, size_t N) {
+    float l2_error = 0.0f, max_error = 0.0f, sum_ref = 0.0f, sum_actual = 0.0f;
+    int significant_errors = 0;
+    const float threshold = 1e-4f;
+    for (size_t i = 0; i < N; ++i) {
+        float diff = ref[i] - actual[i];
+        l2_error += diff * diff;
+        float abs_diff = std::fabs(diff);
+        if (abs_diff > max_error) max_error = abs_diff;
+        if (abs_diff > threshold) significant_errors++;
+        sum_ref += ref[i] * ref[i];
+        sum_actual += actual[i] * actual[i];
+    }
+    l2_error = std::sqrt(l2_error / N);
+    float norm_ref = std::sqrt(sum_ref);
+    float norm_actual = std::sqrt(sum_actual);
+    float relative_error = std::fabs(norm_ref - norm_actual) / (norm_ref + 1e-12f);
+    std::cout << "\nError Analysis:\n";
+    std::cout << "L2 Error: " << l2_error << "\n";
+    std::cout << "Max Error: " << max_error << "\n";
+    std::cout << "Relative Error (L2 norm): " << relative_error * 100 << "%\n";
+    std::cout << "Elements with error > " << threshold << ": " << significant_errors << " ("
+              << (100.0f * significant_errors) / N << "%)\n";
 }

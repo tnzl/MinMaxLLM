@@ -5,6 +5,7 @@
 #include <iostream>
 #include <random>
 #include <immintrin.h>
+#include "../test_utils.cpp"
 
 // Reference SiLU implementation
 static float silu_ref(float x) {
@@ -21,18 +22,22 @@ int main() {
     silu_avx2(x.data(), out.data(), N);
     for (size_t i = 0; i < N; ++i) ref[i] = silu_ref(x[i]);
 
-    int errors = 0;
+    // Only print summary error metrics
+    printErrorAnalysis1D(ref.data(), out.data(), N);
+
+    // Check pass/fail
+    bool pass = true;
     for (size_t i = 0; i < N; ++i) {
         if (std::abs(out[i] - ref[i]) > 1e-4f) {
-            std::cerr << "Mismatch at " << i << ": got " << out[i] << ", expected " << ref[i] << std::endl;
-            ++errors;
+            pass = false;
+            break;
         }
     }
-    if (errors == 0) {
+    if (pass) {
         std::cout << "SiLU AVX2 test passed!\n";
         return 0;
     } else {
-        std::cerr << errors << " mismatches found." << std::endl;
+        std::cerr << "SiLU AVX2 test failed!\n";
         return 1;
     }
 }
