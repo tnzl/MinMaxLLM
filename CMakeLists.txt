@@ -27,6 +27,7 @@ add_library(cpu_ops STATIC
     src/cpu_ops/matmul.cpp
     src/cpu_ops/rotary_embedding.cpp
     src/cpu_ops/gqa.cpp
+    src/cpu_ops/SkipSimplifiedLayerNormalization_AVX2.cpp
 )
 
 # Add executable and link the library
@@ -39,7 +40,11 @@ add_executable(test_rotary_embedding
 add_executable(test_gqa
     tests/cpu_ops/test_gqa.cpp
 )
+add_executable(test_SkipSimplifiedLayerNormalization_AVX2
+    tests/cpu_ops/test_SkipSimplifiedLayerNormalization_AVX2.cpp
+)
 
 target_link_libraries(test_matmul cpu_ops)
 target_link_libraries(test_rotary_embedding cpu_ops)
 target_link_libraries(test_gqa cpu_ops)
+target_link_libraries(test_SkipSimplifiedLayerNormalization_AVX2 cpu_ops)
