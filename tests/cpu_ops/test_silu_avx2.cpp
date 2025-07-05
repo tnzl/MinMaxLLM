@@ -22,10 +22,7 @@ int main() {
     silu_avx2(x.data(), out.data(), N);
     for (size_t i = 0; i < N; ++i) ref[i] = silu_ref(x[i]);
 
-    // Only print summary error metrics
-    printErrorAnalysis1D(ref.data(), out.data(), N);
-
-    // Check pass/fail
+    // Validate
     bool pass = true;
     for (size_t i = 0; i < N; ++i) {
         if (std::abs(out[i] - ref[i]) > 1e-4f) {
@@ -33,6 +30,8 @@ int main() {
             break;
         }
     }
+    // Always print error analysis
+    printErrorAnalysis1D(ref.data(), out.data(), N);
     if (pass) {
         std::cout << "SiLU AVX2 test passed!\n";
         return 0;

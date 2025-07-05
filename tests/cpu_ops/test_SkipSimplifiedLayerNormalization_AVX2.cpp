@@ -34,11 +34,28 @@ int main() {
     SkipSimplifiedLayerNormalization_AVX2(input.data(), skip.data(), gamma.data(), out_opt.data(), H, epsilon);
     // Compare
     float max_diff = 0.0f;
+    float l2_error = 0.0f;
+    float sum_ref = 0.0f, sum_opt = 0.0f;
+    int significant_errors = 0;
+    const float threshold = 1e-5f;
     for (size_t i = 0; i < H; ++i) {
         float diff = std::abs(out_ref[i] - out_opt[i]);
         if (diff > max_diff) max_diff = diff;
+        l2_error += diff * diff;
+        if (diff > threshold) significant_errors++;
+        sum_ref += out_ref[i] * out_ref[i];
+        sum_opt += out_opt[i] * out_opt[i];
     }
-    std::cout << "Max difference: " << max_diff << std::endl;
+    l2_error = std::sqrt(l2_error / H);
+    float norm_ref = std::sqrt(sum_ref);
+    float norm_opt = std::sqrt(sum_opt);
+    float relative_error = std::fabs(norm_ref - norm_opt) / (norm_ref + 1e-12f);
+    std::cout << "\nError Analysis:\n";
+    std::cout << "L2 Error: " << l2_error << "\n";
+    std::cout << "Max Error: " << max_diff << "\n";
+    std::cout << "Relative Error (L2 norm): " << relative_error * 100 << "%\n";
+    std::cout << "Elements with error > " << threshold << ": " << significant_errors << " ("
+              << (100.0f * significant_errors) / H << "%)\n";
     if (max_diff < 1e-5f) {
         std::cout << "Test PASSED!" << std::endl;
         return 0;

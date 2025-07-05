@@ -60,19 +60,15 @@ int main() {
     rotary.rotate(embeddings.data(), num_heads, head_size, 42);
     rotary_ref(embeddings_ref.data(), num_heads, head_size, 42,
               sin_cache.data(), cos_cache.data(), rotary_dim);
-    
-    // Verify results
+    // Print error analysis
     printErrorAnalysis(embeddings.data(), embeddings_ref.data(), 1, embeddings.size());
-    
     // --- Benchmark ---
     constexpr int warmup = 100;
     constexpr int trials = 10000;
-    
     // Warmup
     for (int i = 0; i < warmup; ++i) {
         rotary.rotate(embeddings.data(), num_heads, head_size, i % max_pos);
     }
-    
     // AVX2 timing
     auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < trials; ++i) {
@@ -80,7 +76,6 @@ int main() {
     }
     auto end = std::chrono::high_resolution_clock::now();
     auto avx2_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-    
     // Reference timing
     start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < trials; ++i) {
@@ -89,7 +84,6 @@ int main() {
     }
     end = std::chrono::high_resolution_clock::now();
     auto ref_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-    
     // Results
     std::cout << "\nBenchmark Results:\n";
     std::cout << "AVX2: " << avx2_time / trials << " ns/token\n";

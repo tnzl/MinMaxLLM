@@ -73,12 +73,13 @@ int main() {
     auto out = gqa.forward(query.data(), key.data(), value.data(), seq_len);
 
     // Validate
-    if (!validateResults(ref.data(), out.data(), num_heads, head_dim, 0.001)) {
+    bool pass = validateResults(ref.data(), out.data(), num_heads, head_dim, 0.001);
+    // Always print error analysis
+    printErrorAnalysis(ref.data(), out.data(), num_heads, head_dim);
+    if (!pass) {
         std::cerr << "Error: GQA results don't match!\n";
-        printErrorAnalysis(ref.data(), out.data(), num_heads, head_dim);
         return 1;
     }
     std::cout << "GQA correctness test passed!\n";
-    printErrorAnalysis(ref.data(), out.data(), num_heads, head_dim);
     return 0;
 }
