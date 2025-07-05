@@ -3,6 +3,7 @@
 #include <random>
 #include <cmath>
 #include <cpu_ops/SkipSimplifiedLayerNormalization_AVX2.h>
+#include <chrono>
 
 // Naive reference for validation
 void naive_skip_simplified_layernorm(const float* input, const float* skip, const float* gamma, float* output, size_t H, float epsilon) {
@@ -30,8 +31,16 @@ int main() {
         skip[i] = dist(rng);
         gamma[i] = dist(rng);
     }
+    // Reference timing
+    auto start = std::chrono::high_resolution_clock::now();
     naive_skip_simplified_layernorm(input.data(), skip.data(), gamma.data(), out_ref.data(), H, epsilon);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto ref_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    // AVX2 timing
+    start = std::chrono::high_resolution_clock::now();
     SkipSimplifiedLayerNormalization_AVX2(input.data(), skip.data(), gamma.data(), out_opt.data(), H, epsilon);
+    end = std::chrono::high_resolution_clock::now();
+    auto avx_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
     // Compare
     float max_diff = 0.0f;
     float l2_error = 0.0f;
@@ -56,6 +65,9 @@ int main() {
     std::cout << "Relative Error (L2 norm): " << relative_error * 100 << "%\n";
     std::cout << "Elements with error > " << threshold << ": " << significant_errors << " ("
               << (100.0f * significant_errors) / H << "%)\n";
+    std::cout << "Naive LayerNorm Latency: " << ref_time << " us\n";
+    std::cout << "AVX2 LayerNorm Latency: " << avx_time << " us\n";
+    std::cout << "Speedup: " << (float)ref_time / (float)avx_time << "x\n";
     if (max_diff < 1e-5f) {
         std::cout << "Test PASSED!" << std::endl;
         return 0;

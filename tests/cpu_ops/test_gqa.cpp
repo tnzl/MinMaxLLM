@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cpu_ops/gqa.h>
 #include "../test_utils.cpp"
+#include <chrono>
 
 // Naive GQA implementation for validation
 std::vector<float> naive_gqa_forward(const float* query, const float* key, const float* value, int num_heads, int kv_num_heads, int head_dim, int seq_len, float scale) {
@@ -65,12 +66,18 @@ int main() {
     for (auto& x : key) x = dist(gen);
     for (auto& x : value) x = dist(gen);
 
-    // Naive reference
+    // Naive reference timing
+    auto start = std::chrono::high_resolution_clock::now();
     auto ref = naive_gqa_forward(query.data(), key.data(), value.data(), num_heads, kv_num_heads, head_dim, seq_len, scale);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto naive_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
-    // Optimized GQA
+    // Optimized GQA timing
     GroupQueryAttention gqa(num_heads, kv_num_heads, head_dim, scale);
+    start = std::chrono::high_resolution_clock::now();
     auto out = gqa.forward(query.data(), key.data(), value.data(), seq_len);
+    end = std::chrono::high_resolution_clock::now();
+    auto avx_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
     // Validate
     bool pass = validateResults(ref.data(), out.data(), num_heads, head_dim, 0.001);
@@ -81,5 +88,8 @@ int main() {
         return 1;
     }
     std::cout << "GQA correctness test passed!\n";
+    std::cout << "Naive GQA Latency: " << naive_time << " us\n";
+    std::cout << "AVX GQA Latency: " << avx_time << " us\n";
+    std::cout << "Speedup: " << (float)naive_time / (float)avx_time << "x\n";
     return 0;
 }
