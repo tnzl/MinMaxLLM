@@ -1,7 +1,15 @@
 #pragma once
 #include <immintrin.h>
 
-// Fast exponential approximation for AVX2 (__m256)
+/**
+ * @brief Fast exponential approximation for AVX2 (__m256)
+ *
+ * Approximates exp(x) for each element in the AVX2 vector using a 4th order Taylor expansion.
+ * Input values are clamped to the range [-88.3762626647949, 88.3762626647949] to avoid overflow.
+ *
+ * @param x Input AVX2 vector (__m256)
+ * @return __m256 Vector with exp(x) applied elementwise
+ */
 inline __m256 exp256_ps(__m256 x) {
     const __m256 a0 = _mm256_set1_ps(1.0f);
     const __m256 a1 = _mm256_set1_ps(1.0f);
