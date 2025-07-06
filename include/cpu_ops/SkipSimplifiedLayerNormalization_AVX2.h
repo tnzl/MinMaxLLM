@@ -11,8 +11,9 @@
  * @param input Pointer to input array [H]
  * @param skip Pointer to skip connection array [H]
  * @param gamma Pointer to scale parameter array [H]
- * @param output Pointer to output array [H]
+ * @param output Pointer to output array [H] (normalized output)
+ * @param out_skip Pointer to output array [H] for (input + skip)
  * @param H Number of elements in each array
  * @param epsilon Small constant for numerical stability
  */
-void SkipSimplifiedLayerNormalization_AVX2(const float* input, const float* skip, const float* gamma, float* output, size_t H, float epsilon);
+void SkipSimplifiedLayerNormalization_AVX2(const float* input, const float* skip, const float* gamma, float* output, float* out_skip, size_t H, float epsilon);
