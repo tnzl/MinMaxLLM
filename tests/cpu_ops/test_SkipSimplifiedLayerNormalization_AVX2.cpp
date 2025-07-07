@@ -21,7 +21,7 @@ void naive_skip_simplified_layernorm(const float* input, const float* skip, cons
 }
 
 int main() {
-    constexpr size_t H = 1024;
+    constexpr size_t H = 2048;
     constexpr float epsilon = 1e-5f;
     std::vector<float> input(H), skip(H), gamma(H), out_ref(H), out_opt(H);
     std::mt19937 rng(42);
@@ -37,8 +37,9 @@ int main() {
     auto end = std::chrono::high_resolution_clock::now();
     auto ref_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
     // AVX2 timing
+    std::vector<float> out_skip(H); // dummy, not used in test
     start = std::chrono::high_resolution_clock::now();
-    SkipSimplifiedLayerNormalization_AVX2(input.data(), skip.data(), gamma.data(), out_opt.data(), H, epsilon);
+    SkipSimplifiedLayerNormalization_AVX2(input.data(), skip.data(), gamma.data(), out_opt.data(), out_skip.data(), H, epsilon);
     end = std::chrono::high_resolution_clock::now();
     auto avx_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
     // Compare
@@ -67,7 +68,11 @@ int main() {
               << (100.0f * significant_errors) / H << "%)\n";
     std::cout << "Naive LayerNorm Latency: " << ref_time << " us\n";
     std::cout << "AVX2 LayerNorm Latency: " << avx_time << " us\n";
-    std::cout << "Speedup: " << (float)ref_time / (float)avx_time << "x\n";
+    std::cout << "Speedup: ";
+    if (avx_time > 0)
+        std::cout << (float)ref_time / (float)avx_time << "x\n";
+    else
+        std::cout << "N/A (AVX2 time is zero)\n";
     if (max_diff < 1e-5f) {
         std::cout << "Test PASSED!" << std::endl;
         return 0;
