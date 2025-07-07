@@ -1,0 +1,16 @@
+# CMake file for cpu_ops tests
+add_executable(test_matmul ${CMAKE_SOURCE_DIR}/tests/cpu_ops/test_matmul.cpp)
+add_executable(test_rotary_embedding ${CMAKE_SOURCE_DIR}/tests/cpu_ops/test_rotary_embedding.cpp)
+add_executable(test_gqa ${CMAKE_SOURCE_DIR}/tests/cpu_ops/test_gqa.cpp)
+add_executable(test_SkipSimplifiedLayerNormalization_AVX2 ${CMAKE_SOURCE_DIR}/tests/cpu_ops/test_SkipSimplifiedLayerNormalization_AVX2.cpp)
+add_executable(test_silu_avx2 ${CMAKE_SOURCE_DIR}/tests/cpu_ops/test_silu_avx2.cpp)
+add_executable(test_softmax_avx2 ${CMAKE_SOURCE_DIR}/tests/cpu_ops/test_softmax_avx2.cpp)
+add_executable(test_SimplifiedLayerNormalization_AVX2 ${CMAKE_SOURCE_DIR}/tests/cpu_ops/test_SimplifiedLayerNormalization_AVX2.cpp)
+
+target_link_libraries(test_matmul cpu_ops)
+target_link_libraries(test_rotary_embedding cpu_ops)
+target_link_libraries(test_gqa cpu_ops)
+target_link_libraries(test_SkipSimplifiedLayerNormalization_AVX2 cpu_ops)
+target_link_libraries(test_silu_avx2 cpu_ops)
+target_link_libraries(test_softmax_avx2 cpu_ops)
+target_link_libraries(test_SimplifiedLayerNormalization_AVX2 cpu_ops)
