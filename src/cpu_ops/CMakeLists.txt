@@ -7,4 +7,5 @@ add_library(cpu_ops STATIC
     ${CMAKE_SOURCE_DIR}/src/cpu_ops/SimplifiedLayerNormalization_AVX2.cpp
     ${CMAKE_SOURCE_DIR}/src/cpu_ops/silu_avx2.cpp
     ${CMAKE_SOURCE_DIR}/src/cpu_ops/softmax_avx2.cpp
+    ${CMAKE_SOURCE_DIR}/src/cpu_ops/rmsnorm.cpp
 )
