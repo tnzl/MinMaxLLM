@@ -20,7 +20,7 @@
         2. Qwen3DecoderLayer
             1. Qwen3Attention
             2. Qwen3MLP
-            3. Qwen3RMSNorm
+            3. Qwen3RMSNorm [DONE]
         3. Qwen3RotaryEmbedding
 
 3. Compare kernels to open source libs like libblas

@@ -25,3 +25,4 @@ endif()
 # Add subdirectories for cpu_ops and tests
 add_subdirectory(src/cpu_ops)
 add_subdirectory(tests/cpu_ops)
+add_subdirectory(tests/modules)
