@@ -1,6 +1,38 @@
 #include <iostream>
 #include <algorithm>
 #include <numeric>
+#include <vector>
+#include <sstream>
+#include <fstream>
+
+// Helper to parse comma-separated shape string
+std::vector<int> parse_shape(const std::string& shape_str) {
+    std::vector<int> shape;
+    std::stringstream ss(shape_str);
+    std::string item;
+    while (std::getline(ss, item, ',')) {
+        shape.push_back(std::stoi(item));
+    }
+    return shape;
+}
+
+// Helper to load flat float array from txt file
+std::vector<float> load_txt(const std::string& path) {
+    std::ifstream f(path);
+    if (!f) throw std::runtime_error("Cannot open file: " + path);
+    std::vector<float> data;
+    float val;
+    while (f >> val) data.push_back(val);
+    return data;
+}
+
+// Helper to save flat array to txt file (templated)
+template <typename T>
+void save_txt(const std::string& path, const std::vector<T>& data) {
+    std::ofstream f(path);
+    if (!f) throw std::runtime_error("Cannot open file: " + path);
+    for (const T& v : data) f << v << "\n";
+}
 
 template <typename T>
 void print2DVector(const T* vec, size_t M, size_t N) {
