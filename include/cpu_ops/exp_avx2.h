@@ -4,11 +4,15 @@
 /**
  * @brief Fast exponential approximation for AVX2 (__m256)
  *
- * Approximates exp(x) for each element in the AVX2 vector using a 4th order Taylor expansion.
- * Input values are clamped to the range [-88.3762626647949, 88.3762626647949] to avoid overflow.
+ * Computes an efficient approximation of exp(x) for each element in a 256-bit AVX2 vector.
+ * The input is clamped to [-88.3762626647949, 88.3762626647949] to prevent floating-point overflow.
+ * The algorithm performs range reduction using base-2 exponentiation, then applies a 4th order Taylor expansion
+ * to approximate exp(r) on the reduced range. The final result is scaled by 2^m to reconstruct exp(x).
  *
- * @param x Input AVX2 vector (__m256)
- * @return __m256 Vector with exp(x) applied elementwise
+ * This function is suitable for high-performance scenarios where AVX2 is available and exact precision is not required.
+ *
+ * @param x Input AVX2 vector (__m256) containing single-precision floats
+ * @return __m256 Vector with exp(x) approximated elementwise
  */
 #ifndef M_LN2
 #define M_LN2 0.69314718055994530941723212145818f
