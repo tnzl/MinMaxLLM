@@ -24,3 +24,7 @@
         3. Qwen3RotaryEmbedding
 
 3. Compare kernels to open source libs like libblas
+4. Features :
+    1. memory map weights
+        one weight files : one per decoder or bigger
+    2. MLP block can optimised by doing MM gate, MM up and Silu at the same time.

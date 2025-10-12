@@ -8,12 +8,14 @@ if (-Not (Test-Path $testDir)) {
 }
 
 $testExecutables = @(
+    'test_elemwise_mul.exe',
     'test_gqa.exe',
     'test_matmul.exe',
+    'test_rmsnorm.exe',
     'test_rotary_embedding.exe',
     'test_silu_avx2.exe',
-    'test_SkipSimplifiedLayerNormalization_AVX2.exe',
     'test_SimplifiedLayerNormalization_AVX2.exe',
+    'test_SkipSimplifiedLayerNormalization_AVX2.exe',
     'test_softmax_avx2.exe'
 )
 
