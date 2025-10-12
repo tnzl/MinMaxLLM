@@ -17,6 +17,8 @@ std::vector<int> parse_shape(const std::string& shape_str) {
 }
 
 // Helper to load flat float array from txt file
+//add a deprecation warning
+[[deprecated("Use load_txt that takes void* pointer as input")]]
 std::vector<float> load_txt(const std::string& path) {
     std::ifstream f(path);
     if (!f) throw std::runtime_error("Cannot open file: " + path);
@@ -24,6 +26,13 @@ std::vector<float> load_txt(const std::string& path) {
     float val;
     while (f >> val) data.push_back(val);
     return data;
+}
+
+void load_txt(const std::string& path, void* data) {
+    std::ifstream f(path);
+    if (!f) throw std::runtime_error("Cannot open file: " + path);
+    float* fdata = static_cast<float*>(data);
+    for (int i = 0; f >> fdata[i]; ++i);
 }
 
 // Helper to save flat array to txt file (templated)
