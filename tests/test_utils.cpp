@@ -35,6 +35,13 @@ void load_txt(const std::string& path, void* data) {
     for (int i = 0; f >> fdata[i]; ++i);
 }
 
+void load_bin(const std::string& path, void* data, size_t size) {
+    std::ifstream f(path, std::ios::binary);
+    if (!f) throw std::runtime_error("Cannot open file: " + path);
+    f.read(static_cast<char*>(data), sizeof(float) * size);
+}
+
+
 // Helper to save flat array to txt file (templated)
 template <typename T>
 void save_txt(const std::string& path, const std::vector<T>& data) {

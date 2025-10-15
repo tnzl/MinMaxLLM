@@ -29,9 +29,11 @@ def print_error_analysis(ref_path, actual_path):
 def create_temp_folder(folder_name="temp_test_folder"):
 	if not os.path.exists(folder_name):
 		os.makedirs(folder_name)
+	# return absolute path
+	folder_name = os.path.abspath(folder_name)
 	return folder_name
 
 def generate_random_txt(file_path, shape):
 	arr = np.random.randn(*shape).astype(np.float32)
-	np.savetxt(file_path, arr.flatten())
+	np.savetxt(file_path, arr.flatten(), fmt="%.6f")
 	return arr
