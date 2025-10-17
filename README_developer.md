@@ -26,6 +26,5 @@
 3. Compare kernels to open source libs like libblas
 4. Correct the name formatting in matmul avx. Should be M K N.
 5. Features :
-    1. memory map weights
-        one weight files : one per decoder or bigger
+    1. Update safetensors for memory map weights
     2. MLP block can optimised by doing MM gate, MM up and Silu at the same time.
