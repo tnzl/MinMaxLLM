@@ -10,7 +10,7 @@ import shutil
 
 np.random.seed(42)
 
-def run_gate_proj(gate_model, in_file: str, out_file: str, shape: tuple):
+def run_mlp(mlp, in_file: str, out_file: str, shape: tuple):
     # --- Load input ---
     if not os.path.exists(in_file):
         raise FileNotFoundError(f"Input file not found: {in_file}")
@@ -25,11 +25,11 @@ def run_gate_proj(gate_model, in_file: str, out_file: str, shape: tuple):
         )
     input_data = flat_data.reshape(shape)
 
-    # --- Run gate projection ---
+    # --- Run mlp ---
     input_tensor = torch.from_numpy(input_data)
-    gate_model = gate_model.float()  # ensure weights are in float32 for matmul
+    mlp = mlp.float()  # ensure weights are in float32 for matmul
     with torch.no_grad():
-        output = gate_model(input_tensor).cpu().numpy()
+        output = mlp(input_tensor).cpu().numpy()
 
     # --- Save output ---
     out_dir = os.path.dirname(out_file)
@@ -40,8 +40,10 @@ def run_gate_proj(gate_model, in_file: str, out_file: str, shape: tuple):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run and compare C++/Python Qwen3 MLP gate matmul implementations.")
-    parser.add_argument('--build_dir', type=str, required=True, help='Path to build directory containing run_Qwen3RMSNorm.exe')
+    parser.add_argument('--exe_path', type=str, required=True, help='Path to run_Qwen3MLP.exe')
     parser.add_argument('--model_path', type=str, required=True, help='Path to Qwen model')
+    parser.add_argument('--safetensors_path', type=str, required=True, help='Path to Qwen model safetensor for cpp run')
+    parser.add_argument('--layer_index', default=0, type=int, help='Layer index to run MLP on')
     parser.add_argument('--save_results', action='store_true', help='Save temp folder and results')
     args = parser.parse_args()
 
@@ -55,52 +57,58 @@ if __name__ == "__main__":
         device_map="cpu"      # or "auto" if you want GPU mapping
     )
 
-    gate_proj = model.model.layers[0].mlp.gate_proj
+    mlp = model.model.layers[0].mlp
 
     # Prepare input
-    shape = (1, gate_proj.in_features)
+    input_dim = mlp.gate_proj.in_features
+    up_dim = mlp.up_proj.out_features
+    output_dim = mlp.down_proj.out_features
+
+    shape = (1, input_dim)  # example shape: (1, input_dim)
 
     # Generate random input file
     input_path = os.path.join(temp_folder, "input.txt")
     generate_random_txt(input_path, shape)
     print(f"Random input generated at {input_path}")
 
-    N, K, M = shape[0], gate_proj.in_features, gate_proj.out_features
-
     # Run Python implementation
     out_py_path = os.path.join(temp_folder, "out_py.txt")
-    run_gate_proj(gate_proj, input_path, out_py_path, (N, K))
+    run_mlp(mlp, input_path, out_py_path, (1, input_dim))
     print("Outpit (first 10 elements):", np.loadtxt(out_py_path, dtype=np.float32).flatten()[:10])
     print("Outpit (first 10 elements):", np.loadtxt(out_py_path, dtype=np.float32).flatten()[-10:])
-    print(f"✅ Python output saved to {out_py_path}")
+    print(f"✅ Python output saved to {out_py_path}")    
 
-    #  full path to weight file
-    weight_path = os.path.join(temp_folder, "gate_proj_weight.bin")
-    weights_flat = gate_proj.weight.to(torch.float32).flatten().detach().cpu().numpy()
-    weights_flat.tofile(weight_path)
-
-    print(f"Gate projection weights saved to {weight_path}")
-
-    # print first 10 elements of input and weight for verification
-    input_data = np.loadtxt(input_path, dtype=np.float32)
-    print("Input (first 10 elements):", input_data.flatten()[:10])
-    print("Input (last 10 elements):", input_data.flatten()[-10:])
-
-    print("Weight (first 10 elements):", weights_flat[:10])
-    print("Weight (last 10 elements):", weights_flat[-10:])
+    # delete the model to save memory before running cpp
+    del model
 
     # Run C++ implementation
-    # Usage: <build_dir>\Release\run_Qwen3MLPGate.exe <input.txt> <weight.txt> <output.txt> <N> <K> <M>
     out_cpp_path = os.path.join(temp_folder, "out_cpp.txt")
-    cpp_exe = os.path.join(args.build_dir, "Release\\run_Qwen3MLPGate.exe")
+    cpp_exe = args.exe_path
+    cpp_cmd = [
+        cpp_exe,
+        args.safetensors_path,
+        input_path,
+        out_cpp_path,
+        str(shape[0]),
+        str(input_dim),
+        str(up_dim),
+        str(output_dim),
+        "0"
+    ]
+
+    # print and run command
     print(f"Using C++ executable: {cpp_exe}")
     if not os.path.exists(cpp_exe):
         raise FileNotFoundError(f"C++ executable not found: {cpp_exe}")
 
-    cmd = [cpp_exe, input_path, weight_path, out_cpp_path, str(N), str(K), str(M)]
-    print("Running C++ Qwen3 MLP gate projection:", ' '.join(cmd))
-    subprocess.run(cmd, check=True)
-    print(f"✅ C++ output saved to {out_cpp_path}")
+    result = subprocess.run(cpp_cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        print("C++ execution failed:")
+        print(result.stderr)
+        sys.exit(1)
+    else:
+        print(f"✅ C++ output saved to {out_cpp_path}")
+
 
     # Compare outputs
     print_error_analysis(out_cpp_path, out_py_path)
@@ -111,12 +119,3 @@ if __name__ == "__main__":
         print(f"Temporary folder {temp_folder} deleted.")
     else : 
         print(f"Temporary folder {temp_folder} retained fpr inspection.")
-    
-
-
-    
-    
-
-
-
-    

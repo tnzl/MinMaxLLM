@@ -33,6 +33,10 @@
 
 ## Cleanups :
 1. Correct the name formatting in matmul avx. Should be M K N.
+2. Follow standards in function parameter order : 
+    * inputs first and then outputs 
+    * ex : bool parseString(const char* input, int start_pos, int length, char* output, int* output_length);
+3. Organise cpu ops properly. maybe namespaces based on type of impl : naive / avx2 or more might come. 
 
 ## Performance : 
 1. Use MatMul instead of Linear. lat diff ~1.5x
