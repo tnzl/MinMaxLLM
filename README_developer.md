@@ -23,8 +23,17 @@
             3. Qwen3RMSNorm [DONE]
         3. Qwen3RotaryEmbedding
 
-3. Compare kernels to open source libs like libblas
-4. Correct the name formatting in matmul avx. Should be M K N.
-5. Features :
+## Features :
     1. Update safetensors for memory map weights
-    2. MLP block can optimised by doing MM gate, MM up and Silu at the same time.
+    2. Tensor class :
+       1. wrapper on data
+       2. shape 
+       3. dtype
+       4. prefetch or prepare weights before hand
+
+## Cleanups :
+1. Correct the name formatting in matmul avx. Should be M K N.
+
+## Performance : 
+1. Use MatMul instead of Linear. lat diff ~1.5x
+2. MLP block can optimised by doing MM gate, MM up and Silu at the same time.
