@@ -20,11 +20,13 @@ def print_error_analysis(ref_path, actual_path):
 	relative_error = np.abs(norm_ref - norm_actual) / (norm_ref + 1e-12)
 	significant_error_threshold = 1e-4
 	significant_errors = np.sum(np.abs(ref - actual) > significant_error_threshold)
+	print("=== Error Analysis ===")
 	print("\nError Analysis:")
 	print(f"L2 Error: {l2_error}")
 	print(f"Max Error: {max_error}")
 	print(f"Relative Error (L2 norm): {relative_error * 100}%")
 	print(f"Elements with error > {significant_error_threshold}: {significant_errors} ({100.0 * significant_errors / ref.size}%)")
+	print("=====================")
 
 def create_temp_folder(folder_name="temp_test_folder"):
 	if not os.path.exists(folder_name):

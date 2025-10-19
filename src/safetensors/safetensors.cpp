@@ -1,9 +1,4 @@
 #include <safetensors/safetensors.h>
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <stdexcept>
-#include <cctype>
 
 // ============================================================================
 // MiniJson Implementation
@@ -244,8 +239,9 @@ void MiniJson::parse(const std::string &json)
 // SafeTensor Implementation
 // ============================================================================
 
-SafeTensor::SafeTensor(const std::string &path)
+SafeTensor::SafeTensor(const std::string &path, bool mmap)
 {
+    is_mmap = mmap;
     load(path);
 }
 
@@ -255,10 +251,10 @@ const uint8_t *SafeTensor::tensorDataPtr(const std::string &key) const
     if (!info)
         throw std::runtime_error("Tensor not found: " + key);
 
-    if (info->data_offsets.second > data.size())
+    if (info->data_offsets.second > data_size)
         throw std::runtime_error("Data offset out of range for tensor: " + key);
 
-    return data.data() + info->data_offsets.first;
+    return data + info->data_offsets.first;
 }
 
 size_t SafeTensor::tensorByteSize(const std::string &key) const
@@ -270,6 +266,24 @@ size_t SafeTensor::tensorByteSize(const std::string &key) const
 }
 
 void SafeTensor::load(const std::string &path)
+{
+    if (is_mmap)
+    {
+        load_mmap(path);
+    }
+    else
+    {
+        load_memory(path);
+    }
+}
+
+void SafeTensor::load_mmap(const std::string &path)
+{
+    // Memory-mapped loading can be implemented here if needed
+    throw std::runtime_error("Memory-mapped loading not implemented yet.");
+}
+
+void SafeTensor::load_memory(const std::string &path)
 {
     std::ifstream f(path, std::ios::binary);
     if (!f.is_open())
@@ -293,11 +307,14 @@ void SafeTensor::load(const std::string &path)
     // Read remaining tensor data
     f.seekg(0, std::ios::end);
     size_t total_size = static_cast<size_t>(f.tellg());
-    size_t data_size = total_size - (sizeof(uint64_t) + header_size);
-    data.resize(data_size);
+    data_size = total_size - (sizeof(uint64_t) + header_size);
+    // Allocate memory for tensor data of data_size
+    data = new uint8_t[data_size];
 
     f.seekg(sizeof(uint64_t) + header_size, std::ios::beg);
-    f.read(reinterpret_cast<char *>(data.data()), data_size);
+    f.read(reinterpret_cast<char *>(data), data_size);
     if (!f)
         throw std::runtime_error("Failed to read tensor data");
+
+    f.close();
 }

@@ -5,6 +5,12 @@
 #include <utility>
 #include <cstddef>
 #include <cstdint>
+#include <windows.h>
+#include <iostream>
+#include <sstream>
+#include <fstream>
+#include <stdexcept>
+#include <cctype>
 
 struct TensorInfo
 {
@@ -44,7 +50,7 @@ private:
 class SafeTensor
 {
 public:
-    SafeTensor(const std::string &path);
+    SafeTensor(const std::string &path, bool mmap = false);
 
     // Accessors
     const std::vector<std::string> &keys() const { return json.keys(); }
@@ -59,7 +65,13 @@ public:
 
 private:
     MiniJson json;
-    std::vector<uint8_t> data;
+    uint8_t *data;
+    size_t data_size;
+    bool is_mmap = false;
+
+    // memory map variables
 
     void load(const std::string &path);
+    void load_memory(const std::string &path);
+    void load_mmap(const std::string &path);
 };

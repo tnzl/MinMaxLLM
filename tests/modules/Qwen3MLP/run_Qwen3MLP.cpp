@@ -2,6 +2,7 @@
 #include <cpu_ops/linear.h>
 #include <cpu_ops/silu_avx2.h>
 #include <cpu_ops/elemwise_mul.h>
+#include <chrono>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -37,7 +38,6 @@ void qwen3_mlp(const float *input, const float *gate_weight, const float *up_wei
 
 int main(int argc, char **argv)
 {
-    std::cout << "=== Qwen3 MLP Module Test C++ run ===\n";
     if (argc < 8)
     {
         std::cerr << "Usage: " << argv[0] << " <input.txt> <weight.txt> <output.txt> <N> <K> <M>\n";
@@ -53,17 +53,17 @@ int main(int argc, char **argv)
     int output_dim = std::stoi(argv[7]);
     int layer_idx = std::stoi(argv[8]);
 
-    // Print configuration
-    std::cout << "Qwen3 MLP Configuration:\n";
-    std::cout << "  Input file: " << input_path << "\n";
-    std::cout << "  Safetensors file: " << safetensors_path << "\n";
-    std::cout << "  Output file: " << output_path << "\n";
-    std::cout << "  Batch size (N): " << N << "\n";
-    std::cout << "  Input dimension (K): " << input_dim << "\n";
-    std::cout << "  Up projection dimension: " << up_dim << "\n";
-    std::cout << "  Output dimension (M): " << output_dim << "\n";
-    std::cout << "  Layer index: " << layer_idx << "\n";
-    std::cout << "----------------------------------------\n";
+    // // Print configuration
+    // std::cout << "Qwen3 MLP Configuration:\n";
+    // std::cout << "  Input file: " << input_path << "\n";
+    // std::cout << "  Safetensors file: " << safetensors_path << "\n";
+    // std::cout << "  Output file: " << output_path << "\n";
+    // std::cout << "  Batch size (N): " << N << "\n";
+    // std::cout << "  Input dimension (K): " << input_dim << "\n";
+    // std::cout << "  Up projection dimension: " << up_dim << "\n";
+    // std::cout << "  Output dimension (M): " << output_dim << "\n";
+    // std::cout << "  Layer index: " << layer_idx << "\n";
+    // std::cout << "----------------------------------------\n";
 
     std::vector<float> input(N * input_dim);
     load_txt(input_path, input.data());
@@ -92,8 +92,21 @@ int main(int argc, char **argv)
 
     try
     {
-        qwen3_mlp(input.data(), gate_wt_ptr, up_wt_ptr, down_wt_ptr, N, input_dim, up_dim, output_dim, output.data());
-        std::cout << "✅ Qwen3 MLP computation completed.\n";
+        // Perform Qwen3 MLP computation over 10 iterations and average time
+        const int iterations = 10;
+        double total_time = 0.0;
+        for (int iter = 0; iter < iterations; ++iter)
+        {
+            auto start = std::chrono::high_resolution_clock::now();
+
+            qwen3_mlp(input.data(), gate_wt_ptr, up_wt_ptr, down_wt_ptr, N, input_dim, up_dim, output_dim, output.data());
+
+            auto end = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double, std::micro> elapsed = end - start;
+            total_time += elapsed.count();
+        }
+        double avg_time = total_time / iterations;
+        std::cout << "C++ MLP execution time: " << avg_time << " us\n";
     }
     catch (const std::exception &e)
     {

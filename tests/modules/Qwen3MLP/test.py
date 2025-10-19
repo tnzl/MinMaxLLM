@@ -7,6 +7,8 @@ import os
 from tests.test_utils import parse_shape, print_error_analysis, create_temp_folder, generate_random_txt
 import argparse
 import shutil
+import time
+from tqdm import tqdm
 
 np.random.seed(42)
 
@@ -29,14 +31,22 @@ def run_mlp(mlp, in_file: str, out_file: str, shape: tuple):
     input_tensor = torch.from_numpy(input_data)
     mlp = mlp.float()  # ensure weights are in float32 for matmul
     with torch.no_grad():
-        output = mlp(input_tensor).cpu().numpy()
+        iters = 10
+        lat = 0        
+        # run for multiple iterations to get stable timing
+        for _ in tqdm(range(iters), desc="Running Python MLP"):
+            st_t = time.time_ns()
+            output = mlp(input_tensor).cpu().numpy()
+            end_t = time.time_ns()
+            lat += (end_t - st_t)
+        print(f"Python MLP execution time: {((lat)/1e3)/iters :.2f} µs over 10 runs")
 
     # --- Save output ---
     out_dir = os.path.dirname(out_file)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
     np.savetxt(out_file, output.flatten(), fmt="%.6f")  # flatten output to 1D
-    print(f"✅ Output saved to {out_file}")
+    print(f"✅ Python Output saved to {out_file}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run and compare C++/Python Qwen3 MLP gate matmul implementations.")
@@ -74,9 +84,6 @@ if __name__ == "__main__":
     # Run Python implementation
     out_py_path = os.path.join(temp_folder, "out_py.txt")
     run_mlp(mlp, input_path, out_py_path, (1, input_dim))
-    print("Outpit (first 10 elements):", np.loadtxt(out_py_path, dtype=np.float32).flatten()[:10])
-    print("Outpit (first 10 elements):", np.loadtxt(out_py_path, dtype=np.float32).flatten()[-10:])
-    print(f"✅ Python output saved to {out_py_path}")    
 
     # delete the model to save memory before running cpp
     del model
@@ -101,14 +108,11 @@ if __name__ == "__main__":
     if not os.path.exists(cpp_exe):
         raise FileNotFoundError(f"C++ executable not found: {cpp_exe}")
 
-    result = subprocess.run(cpp_cmd, capture_output=True, text=True)
+    result = subprocess.run(cpp_cmd, text=True)
     if result.returncode != 0:
         print("C++ execution failed:")
         print(result.stderr)
         sys.exit(1)
-    else:
-        print(f"✅ C++ output saved to {out_cpp_path}")
-
 
     # Compare outputs
     print_error_analysis(out_cpp_path, out_py_path)
