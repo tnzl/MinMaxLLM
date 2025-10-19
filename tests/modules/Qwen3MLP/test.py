@@ -55,6 +55,7 @@ if __name__ == "__main__":
     parser.add_argument('--safetensors_path', type=str, required=True, help='Path to Qwen model safetensor for cpp run')
     parser.add_argument('--layer_index', default=0, type=int, help='Layer index to run MLP on')
     parser.add_argument('--save_results', action='store_true', help='Save temp folder and results')
+    parser.add_argument('--mmap', action='store_true', help='Use memory-mapped safetensors in C++')
     args = parser.parse_args()
 
     temp_folder = create_temp_folder()
@@ -100,7 +101,8 @@ if __name__ == "__main__":
         str(input_dim),
         str(up_dim),
         str(output_dim),
-        "0"
+        "0",
+        "1" if args.mmap else "0"
     ]
 
     # print and run command

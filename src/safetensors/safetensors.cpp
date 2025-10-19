@@ -240,9 +240,57 @@ void MiniJson::parse(const std::string &json)
 // ============================================================================
 
 SafeTensor::SafeTensor(const std::string &path, bool mmap)
+    : data(nullptr),
+      data_size(0),
+      is_mmap(mmap),
+      hFile_(INVALID_HANDLE_VALUE),
+      hMap_(nullptr)
 {
-    is_mmap = mmap;
     load(path);
+}
+
+SafeTensor::~SafeTensor()
+{
+    if (is_mmap)
+    {
+        cleanup_mmap();
+    }
+    else
+    {
+        delete[] data;
+    }
+}
+
+void SafeTensor::cleanup_mmap()
+{
+    if (data)
+        UnmapViewOfFile(data);
+    data = nullptr;
+    if (hMap_)
+        CloseHandle(hMap_);
+    hMap_ = nullptr;
+    if (hFile_ != INVALID_HANDLE_VALUE)
+        CloseHandle(hFile_);
+    hFile_ = INVALID_HANDLE_VALUE;
+}
+
+// Prefetch wrapper (your safe version)
+bool SafeTensor::windows_advise(void *ptr, size_t size) noexcept
+{
+    if (!ptr || size == 0)
+        return false;
+
+    using PrefetchVirtualMemoryFn = BOOL(WINAPI *)(HANDLE, ULONG, PWIN32_MEMORY_RANGE_ENTRY, ULONG);
+    static auto fn = reinterpret_cast<PrefetchVirtualMemoryFn>(
+        GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "PrefetchVirtualMemory"));
+    if (!fn)
+        return false; // Not supported
+
+    WIN32_MEMORY_RANGE_ENTRY range;
+    range.VirtualAddress = ptr;
+    range.NumberOfBytes = size;
+
+    return fn(GetCurrentProcess(), 1, &range, 0) != 0;
 }
 
 const uint8_t *SafeTensor::tensorDataPtr(const std::string &key) const
@@ -251,10 +299,15 @@ const uint8_t *SafeTensor::tensorDataPtr(const std::string &key) const
     if (!info)
         throw std::runtime_error("Tensor not found: " + key);
 
-    if (info->data_offsets.second > data_size)
-        throw std::runtime_error("Data offset out of range for tensor: " + key);
+    size_t start = info->data_offsets.first;
+    size_t end = info->data_offsets.second;
 
-    return data + info->data_offsets.first;
+    if (start >= data_size || end > data_size || start >= end)
+    {
+        throw std::runtime_error("Invalid data offsets for tensor: " + key);
+    }
+
+    return data + start;
 }
 
 size_t SafeTensor::tensorByteSize(const std::string &key) const
@@ -279,8 +332,44 @@ void SafeTensor::load(const std::string &path)
 
 void SafeTensor::load_mmap(const std::string &path)
 {
-    // Memory-mapped loading can be implemented here if needed
-    throw std::runtime_error("Memory-mapped loading not implemented yet.");
+    hFile_ = INVALID_HANDLE_VALUE;
+    hMap_ = nullptr;
+
+    hFile_ = CreateFileW(std::wstring(path.begin(), path.end()).c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile_ == INVALID_HANDLE_VALUE)
+        throw std::runtime_error("Cannot open file: " + path);
+
+    LARGE_INTEGER fileSize;
+    if (!GetFileSizeEx(hFile_, &fileSize))
+    {
+        CloseHandle(hFile_);
+        throw std::runtime_error("Cannot get file size: " + path);
+    }
+
+    size_t file_size = static_cast<size_t>(fileSize.QuadPart);
+
+    hMap_ = CreateFileMappingW(hFile_, NULL, PAGE_READONLY, 0, 0, NULL);
+    if (!hMap_)
+    {
+        CloseHandle(hFile_);
+        throw std::runtime_error("Cannot create file mapping: " + path);
+    }
+
+    uint8_t *file_data = static_cast<uint8_t *>(MapViewOfFile(hMap_, FILE_MAP_READ, 0, 0, 0));
+    if (!file_data)
+    {
+        CloseHandle(hMap_);
+        CloseHandle(hFile_);
+        throw std::runtime_error("Cannot map view of file: " + path);
+    }
+    // Read header length (first 8 bytes, little endian)
+    uint64_t header_size = *reinterpret_cast<uint64_t *>(file_data);
+
+    // Parse header using MiniJson
+    json = MiniJson(reinterpret_cast<char *>(file_data + sizeof(uint64_t)), header_size);
+
+    data = file_data + sizeof(uint64_t) + header_size;
+    data_size = file_size - (sizeof(uint64_t) + header_size);
 }
 
 void SafeTensor::load_memory(const std::string &path)

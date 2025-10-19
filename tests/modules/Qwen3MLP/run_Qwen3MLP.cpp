@@ -10,6 +10,19 @@
 #include <string>
 #include <cmath>
 #include "../../test_utils.cpp"
+#include <windows.h>
+#include <psapi.h>
+
+void printPeakMemoryUsage()
+{
+    PROCESS_MEMORY_COUNTERS pmc;
+    if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc)))
+    {
+        std::cout << "Peak Working Set Size: "
+                  << pmc.PeakWorkingSetSize / (1024.0 * 1024.0)
+                  << " MB" << std::endl;
+    }
+}
 
 void qwen3_mlp(const float *input, const float *gate_weight, const float *up_weight, const float *down_weight, int N, int input_dim, int up_dim, int output_dim, float *output)
 {
@@ -38,9 +51,9 @@ void qwen3_mlp(const float *input, const float *gate_weight, const float *up_wei
 
 int main(int argc, char **argv)
 {
-    if (argc < 8)
+    if (argc < 9)
     {
-        std::cerr << "Usage: " << argv[0] << " <input.txt> <weight.txt> <output.txt> <N> <K> <M>\n";
+        std::cerr << "Usage: " << argv[0] << " <input.txt> <weight.txt> <output.txt> <N> <K> <M> <layer_idx> <use_mmap(1/0)>\n";
         std::cerr << "Example shape: 2,256\n";
         return 1;
     }
@@ -52,6 +65,7 @@ int main(int argc, char **argv)
     int up_dim = std::stoi(argv[6]);
     int output_dim = std::stoi(argv[7]);
     int layer_idx = std::stoi(argv[8]);
+    bool use_mmap = std::stoi(argv[9]) != 0;
 
     // // Print configuration
     // std::cout << "Qwen3 MLP Configuration:\n";
@@ -68,7 +82,11 @@ int main(int argc, char **argv)
     std::vector<float> input(N * input_dim);
     load_txt(input_path, input.data());
 
-    SafeTensor st(safetensors_path);
+    auto start_st = std::chrono::high_resolution_clock::now();
+    SafeTensor st(safetensors_path, use_mmap);
+    auto end_st = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::micro> elapsed_st = end_st - start_st;
+    std::cout << "✅ Safetensors" << (use_mmap ? "(mmap)" : "") << " loaded in " << elapsed_st.count() << " us\n";
 
     std::string gate_wt_key = "model.layers." + std::to_string(layer_idx) + ".mlp.gate_proj.weight";
     std::string up_wt_key = "model.layers." + std::to_string(layer_idx) + ".mlp.up_proj.weight";
@@ -117,6 +135,8 @@ int main(int argc, char **argv)
     // Save output
     save_txt(output_path, output);
     std::cout << "✅ Output saved to " << output_path << std::endl;
+
+    printPeakMemoryUsage();
 
     return 0;
 }

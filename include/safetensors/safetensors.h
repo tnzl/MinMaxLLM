@@ -11,7 +11,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <cctype>
-
+#include <thread>
 struct TensorInfo
 {
     std::string dtype;
@@ -51,6 +51,7 @@ class SafeTensor
 {
 public:
     SafeTensor(const std::string &path, bool mmap = false);
+    ~SafeTensor();
 
     // Accessors
     const std::vector<std::string> &keys() const { return json.keys(); }
@@ -63,15 +64,20 @@ public:
     const uint8_t *tensorDataPtr(const std::string &key) const;
     size_t tensorByteSize(const std::string &key) const;
 
+    static bool windows_advise(void *ptr, size_t size) noexcept;
+
 private:
     MiniJson json;
     uint8_t *data;
     size_t data_size;
     bool is_mmap = false;
+    HANDLE hFile_;
+    HANDLE hMap_;
 
     // memory map variables
 
     void load(const std::string &path);
     void load_memory(const std::string &path);
     void load_mmap(const std::string &path);
+    void cleanup_mmap();
 };
