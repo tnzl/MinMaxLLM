@@ -24,18 +24,29 @@ void printPeakMemoryUsage()
     }
 }
 
-void qwen3_mlp(const float *input, const float *gate_weight, const float *up_weight, const float *down_weight, int N, int input_dim, int up_dim, int output_dim, float *output)
+void qwen3_mlp(const float *input, const float *gate_weight, const float *up_weight, const float *down_weight, int N, int input_dim, int up_dim, int output_dim, float *output, bool use_advise)
 {
     float *intermediate_silu = static_cast<float *>(_aligned_malloc(N * up_dim * sizeof(float), 32));
     float *intermediate_up = static_cast<float *>(_aligned_malloc(N * up_dim * sizeof(float), 32));
 
     // Gate projection
+    if (use_advise)
+    {
+        // Prefetch gate_weight and up_weight
+        SafeTensor::windows_advise((void *)gate_weight, input_dim * up_dim * sizeof(float));
+        SafeTensor::windows_advise((void *)up_weight, input_dim * up_dim * sizeof(float));
+    }
     linear_avx2_omp(input, gate_weight, N, input_dim, up_dim, intermediate_silu);
 
     // SiLU activation
     silu_avx2(intermediate_silu, intermediate_silu, N * up_dim);
 
     // Up projection
+    if (use_advise)
+    {
+        // Prefetch down_weight
+        SafeTensor::windows_advise((void *)down_weight, up_dim * output_dim * sizeof(float));
+    }
     linear_avx2_omp(input, up_weight, N, input_dim, up_dim, intermediate_up);
 
     // Element-wise multiplication
@@ -51,9 +62,9 @@ void qwen3_mlp(const float *input, const float *gate_weight, const float *up_wei
 
 int main(int argc, char **argv)
 {
-    if (argc < 9)
+    if (argc < 11)
     {
-        std::cerr << "Usage: " << argv[0] << " <input.txt> <weight.txt> <output.txt> <N> <K> <M> <layer_idx> <use_mmap(1/0)>\n";
+        std::cerr << "Usage: " << argv[0] << " <input.txt> <weight.txt> <output.txt> <N> <K> <M> <layer_idx> <use_mmap(1/0)> <use_advise(1/0)>\n";
         std::cerr << "Example shape: 2,256\n";
         return 1;
     }
@@ -66,6 +77,7 @@ int main(int argc, char **argv)
     int output_dim = std::stoi(argv[7]);
     int layer_idx = std::stoi(argv[8]);
     bool use_mmap = std::stoi(argv[9]) != 0;
+    bool use_advise = std::stoi(argv[10]) != 0;
 
     // // Print configuration
     // std::cout << "Qwen3 MLP Configuration:\n";
@@ -117,7 +129,7 @@ int main(int argc, char **argv)
         {
             auto start = std::chrono::high_resolution_clock::now();
 
-            qwen3_mlp(input.data(), gate_wt_ptr, up_wt_ptr, down_wt_ptr, N, input_dim, up_dim, output_dim, output.data());
+            qwen3_mlp(input.data(), gate_wt_ptr, up_wt_ptr, down_wt_ptr, N, input_dim, up_dim, output_dim, output.data(), use_mmap && use_advise);
 
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double, std::micro> elapsed = end - start;

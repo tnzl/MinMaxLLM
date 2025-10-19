@@ -56,6 +56,7 @@ if __name__ == "__main__":
     parser.add_argument('--layer_index', default=0, type=int, help='Layer index to run MLP on')
     parser.add_argument('--save_results', action='store_true', help='Save temp folder and results')
     parser.add_argument('--mmap', action='store_true', help='Use memory-mapped safetensors in C++')
+    parser.add_argument('--advise', action='store_true', help='Use memory-mapped safetensors in C++')
     args = parser.parse_args()
 
     temp_folder = create_temp_folder()
@@ -102,11 +103,15 @@ if __name__ == "__main__":
         str(up_dim),
         str(output_dim),
         "0",
-        "1" if args.mmap else "0"
+        "1" if args.mmap else "0",
+        "1" if args.advise else "0"
     ]
 
-    # print and run command
-    print(f"Using C++ executable: {cpp_exe}")
+    # print the command to be run
+    cpp_cmd_str = " ".join(cpp_cmd)
+    print(f"Running C++ command: {cpp_cmd_str}")
+
+    # run command
     if not os.path.exists(cpp_exe):
         raise FileNotFoundError(f"C++ executable not found: {cpp_exe}")
 
@@ -124,4 +129,4 @@ if __name__ == "__main__":
         shutil.rmtree(temp_folder)
         print(f"Temporary folder {temp_folder} deleted.")
     else : 
-        print(f"Temporary folder {temp_folder} retained fpr inspection.")
+        print(f"Temporary folder {temp_folder} retained for inspection.")
