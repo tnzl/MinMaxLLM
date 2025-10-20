@@ -47,11 +47,11 @@ private:
     void parse(const std::string &json);
 };
 
-class SafeTensor
+class Safetensor
 {
 public:
-    SafeTensor(const std::string &path, bool mmap = false);
-    ~SafeTensor();
+    Safetensor(const std::string &path, bool mmap = false);
+    ~Safetensor();
 
     // Accessors
     const std::vector<std::string> &keys() const { return json.keys(); }

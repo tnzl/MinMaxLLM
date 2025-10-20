@@ -1,4 +1,4 @@
-#include <safetensors/safetensors.h>
+#include <tensor/safetensors.h>
 #include <cpu_ops/linear.h>
 #include <cpu_ops/silu_avx2.h>
 #include <cpu_ops/elemwise_mul.h>
@@ -40,7 +40,7 @@ private:
 
     std::vector<float> input;
     std::vector<float> output;
-    SafeTensor *st;
+    Safetensor *st;
 
     const float *gate_wt_ptr;
     const float *up_wt_ptr;
@@ -91,7 +91,7 @@ public:
     void loadWeights()
     {
         auto start_st = std::chrono::high_resolution_clock::now();
-        st = new SafeTensor(safetensors_path, use_mmap);
+        st = new Safetensor(safetensors_path, use_mmap);
         auto end_st = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::micro> elapsed_st = end_st - start_st;
         std::cout << "✅ Safetensors" << (use_mmap ? "(mmap)" : "") << " loaded in " << elapsed_st.count() << " us\n";
@@ -126,9 +126,9 @@ public:
             size_t up_size = input_dim * up_dim * sizeof(float);
             size_t down_size = up_dim * output_dim * sizeof(float);
 
-            SafeTensor::windows_advise((void *)gate_weight, gate_size);
-            SafeTensor::windows_advise((void *)up_weight, up_size);
-            SafeTensor::windows_advise((void *)down_weight, down_size);
+            Safetensor::windows_advise((void *)gate_weight, gate_size);
+            Safetensor::windows_advise((void *)up_weight, up_size);
+            Safetensor::windows_advise((void *)down_weight, down_size);
         }
 
         // Gate projection

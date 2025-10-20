@@ -5,8 +5,8 @@ add_executable(run_Qwen3MLP ${CMAKE_SOURCE_DIR}/tests/modules/Qwen3MLP/run_Qwen3
 
 target_link_libraries(run_Qwen3RMSNorm cpu_ops)
 target_link_libraries(run_Qwen3MLPGate cpu_ops)
-target_link_libraries(run_safetensors safetensors)
-target_link_libraries(run_Qwen3MLP cpu_ops safetensors)
+target_link_libraries(run_safetensors tensor)
+target_link_libraries(run_Qwen3MLP cpu_ops tensor)
 
 set_target_properties(run_Qwen3RMSNorm PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set_target_properties(run_Qwen3MLPGate PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})

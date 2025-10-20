@@ -1,4 +1,4 @@
-#include <safetensors/safetensors.h>
+#include <tensor/safetensors.h>
 
 // ============================================================================
 // MiniJson Implementation
@@ -236,10 +236,10 @@ void MiniJson::parse(const std::string &json)
 }
 
 // ============================================================================
-// SafeTensor Implementation
+// Safetensor Implementation
 // ============================================================================
 
-SafeTensor::SafeTensor(const std::string &path, bool mmap)
+Safetensor::Safetensor(const std::string &path, bool mmap)
     : data(nullptr),
       data_size(0),
       is_mmap(mmap),
@@ -249,7 +249,7 @@ SafeTensor::SafeTensor(const std::string &path, bool mmap)
     load(path);
 }
 
-SafeTensor::~SafeTensor()
+Safetensor::~Safetensor()
 {
     if (is_mmap)
     {
@@ -261,7 +261,7 @@ SafeTensor::~SafeTensor()
     }
 }
 
-void SafeTensor::cleanup_mmap()
+void Safetensor::cleanup_mmap()
 {
     if (data)
         UnmapViewOfFile(data);
@@ -275,7 +275,7 @@ void SafeTensor::cleanup_mmap()
 }
 
 // Prefetch wrapper (your safe version)
-bool SafeTensor::windows_advise(void *ptr, size_t size) noexcept
+bool Safetensor::windows_advise(void *ptr, size_t size) noexcept
 {
     if (!ptr || size == 0)
         return false;
@@ -293,7 +293,7 @@ bool SafeTensor::windows_advise(void *ptr, size_t size) noexcept
     return fn(GetCurrentProcess(), 1, &range, 0) != 0;
 }
 
-const uint8_t *SafeTensor::tensorDataPtr(const std::string &key) const
+const uint8_t *Safetensor::tensorDataPtr(const std::string &key) const
 {
     const auto *info = json.get(key);
     if (!info)
@@ -310,7 +310,7 @@ const uint8_t *SafeTensor::tensorDataPtr(const std::string &key) const
     return data + start;
 }
 
-size_t SafeTensor::tensorByteSize(const std::string &key) const
+size_t Safetensor::tensorByteSize(const std::string &key) const
 {
     const auto *info = json.get(key);
     if (!info)
@@ -318,7 +318,7 @@ size_t SafeTensor::tensorByteSize(const std::string &key) const
     return info->data_offsets.second - info->data_offsets.first;
 }
 
-void SafeTensor::load(const std::string &path)
+void Safetensor::load(const std::string &path)
 {
     if (is_mmap)
     {
@@ -330,7 +330,7 @@ void SafeTensor::load(const std::string &path)
     }
 }
 
-void SafeTensor::load_mmap(const std::string &path)
+void Safetensor::load_mmap(const std::string &path)
 {
     hFile_ = INVALID_HANDLE_VALUE;
     hMap_ = nullptr;
@@ -372,7 +372,7 @@ void SafeTensor::load_mmap(const std::string &path)
     data_size = file_size - (sizeof(uint64_t) + header_size);
 }
 
-void SafeTensor::load_memory(const std::string &path)
+void Safetensor::load_memory(const std::string &path)
 {
     std::ifstream f(path, std::ios::binary);
     if (!f.is_open())

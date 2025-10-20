@@ -1,4 +1,4 @@
-#include <safetensors/safetensors.h>
+#include <tensor/safetensors.h>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -14,7 +14,7 @@ int main(int argc, char **argv)
 
     try
     {
-        SafeTensor st(argv[1]);
+        Safetensor st(argv[1]);
 
         std::cout << "Keys in the safetensor file:\n";
         for (const auto &key : st.keys())
