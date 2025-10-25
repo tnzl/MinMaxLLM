@@ -71,7 +71,6 @@ template <typename T>
 void measureAccessLatency(const Tensor<T> &tensor, const string &label)
 {
     const T *ptr = tensor.data();
-    size_t bytes = tensor.size() * sizeof(T);
     size_t step = 4096 / sizeof(T);
     volatile double sum = 0.0;
 
@@ -85,81 +84,84 @@ void measureAccessLatency(const Tensor<T> &tensor, const string &label)
 }
 
 // ------------------------------------------------------------
-// Main Test
+// Test modes
 // ------------------------------------------------------------
-int main(int argc, char **argv)
+void test_prefetch(Tensor<float> &tensor)
 {
-    if (argc != 2)
-    {
-        cerr << "Usage: " << argv[0] << " <safetensor_file>\n";
-        return 1;
-    }
-
-    const string path = argv[1];
-    Safetensor st(path, true);
-
-    const string key1 = "tensor_0";
-    const string key2 = "tensor_2";
-
-    const auto *info1 = st.getTensorInfo(key1);
-    const auto *info2 = st.getTensorInfo(key2);
-    if (!info1 || !info2)
-    {
-        cerr << "Tensor keys not found.\n";
-        return 1;
-    }
-
-    const float *data1 = st.tensorDataPtr<float>(key1);
-    const float *data2 = st.tensorDataPtr<float>(key2);
-
-    Tensor<float> tensor1(const_cast<float *>(data1), info1->shape, true);
-    Tensor<float> tensor2(const_cast<float *>(data2), info2->shape, true);
-
-    cout << "Tensor sizes:\n";
-    cout << "  tensor_0: " << (tensor1.size() * sizeof(float)) / (1024.0 * 1024.0) << " MB\n";
-    cout << "  tensor_2: " << (tensor2.size() * sizeof(float)) / (1024.0 * 1024.0) << " MB\n";
-
-    // ------------------------------------------------------------
-    // Baseline: before prefetch
-    // ------------------------------------------------------------
     printMemoryStats("Before prefetch()");
-    checkWorkingSet(tensor2.data(), tensor2.size() * sizeof(float));
-    measureAccessLatency(tensor2, "Before prefetch()");
+    checkWorkingSet(tensor.data(), tensor.size() * sizeof(float));
+    measureAccessLatency(tensor, "Before prefetch()");
 
-    // ------------------------------------------------------------
-    // Synchronous prefetch()
-    // ------------------------------------------------------------
     cout << "\nTesting prefetch()...\n";
     auto t0 = high_resolution_clock::now();
-    bool ok = tensor2.prefetch();
+    bool ok = tensor.prefetch();
     auto t1 = high_resolution_clock::now();
 
     cout << "  prefetch() result: " << (ok ? "OK" : "FAILED")
          << " | duration: " << duration_cast<milliseconds>(t1 - t0).count() << " ms\n";
 
     printMemoryStats("After prefetch()");
-    checkWorkingSet(tensor2.data(), tensor2.size() * sizeof(float));
-    measureAccessLatency(tensor2, "After prefetch()");
+    checkWorkingSet(tensor.data(), tensor.size() * sizeof(float));
+    measureAccessLatency(tensor, "After prefetch()");
+}
 
-    // ------------------------------------------------------------
-    // Async prefetch
-    // ------------------------------------------------------------
-    cout << "\nTesting async prefetch_async() ...\n";
-    auto t2 = high_resolution_clock::now();
-    tensor1.prefetch_async();
-    tensor2.prefetch_async();
-    auto t3 = high_resolution_clock::now();
+void test_async_prefetch(Tensor<float> &tensor)
+{
+    printMemoryStats("Before async prefetch()");
+    checkWorkingSet(tensor.data(), tensor.size() * sizeof(float));
+    measureAccessLatency(tensor, "Before async prefetch()");
 
-    cout << "  Async enqueue time: "
-         << duration_cast<microseconds>(t3 - t2).count() << " µs\n";
-    cout << "  Waiting for async prefetch (3s)...\n";
-    this_thread::sleep_for(seconds(3));
+    cout << "\nTesting prefetch_async()...\n";
+    auto t0 = high_resolution_clock::now();
+    tensor.prefetch_async();
+    auto t1 = high_resolution_clock::now();
+
+    cout << "  Enqueued async prefetch in "
+         << duration_cast<microseconds>(t1 - t0).count() << " us\n";
+    cout << "  Waiting for async prefetch (5s)...\n";
+    this_thread::sleep_for(seconds(5));
 
     printMemoryStats("After async prefetch()");
-    checkWorkingSet(tensor1.data(), tensor1.size() * sizeof(float));
-    checkWorkingSet(tensor2.data(), tensor2.size() * sizeof(float));
-    measureAccessLatency(tensor1, "After async prefetch()");
-    measureAccessLatency(tensor2, "After async prefetch()");
+    checkWorkingSet(tensor.data(), tensor.size() * sizeof(float));
+    measureAccessLatency(tensor, "After async prefetch()");
+}
+
+// ------------------------------------------------------------
+// Main
+// ------------------------------------------------------------
+int main(int argc, char **argv)
+{
+    if (argc < 3)
+    {
+        cerr << "Usage: " << argv[0] << " <safetensor_file> <--prefetch | --async>\n";
+        return 1;
+    }
+
+    const string path = argv[1];
+    const string mode = argv[2];
+
+    Safetensor st(path, true);
+
+    const string key = "tensor_2"; // test big tensor for visibility
+    const auto *info = st.getTensorInfo(key);
+    if (!info)
+    {
+        cerr << "Tensor key not found: " << key << "\n";
+        return 1;
+    }
+
+    const float *data = st.tensorDataPtr<float>(key);
+    Tensor<float> tensor(const_cast<float *>(data), info->shape, true);
+
+    cout << "Tensor under test: " << key << " | size = "
+         << (tensor.size() * sizeof(float)) / (1024.0 * 1024.0) << " MB\n";
+
+    if (mode == "--prefetch")
+        test_prefetch(tensor);
+    else if (mode == "--async")
+        test_async_prefetch(tensor);
+    else
+        cerr << "Unknown mode: " << mode << " (use --prefetch or --async)\n";
 
     cout << "\nTest completed.\n";
     return 0;
