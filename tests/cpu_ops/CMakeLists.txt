@@ -9,6 +9,7 @@ add_executable(test_SimplifiedLayerNormalization_AVX2 ${CMAKE_SOURCE_DIR}/tests/
 add_executable(test_rmsnorm ${CMAKE_SOURCE_DIR}/tests/cpu_ops/test_rmsnorm.cpp)
 add_executable(test_elemwise_mul ${CMAKE_SOURCE_DIR}/tests/cpu_ops/test_elemwise_mul.cpp)
 add_executable(test_linear ${CMAKE_SOURCE_DIR}/tests/cpu_ops/test_linear.cpp)
+add_executable(test_tensor ${CMAKE_SOURCE_DIR}/tests/cpu_ops/test_tensor.cpp)
 
 target_link_libraries(test_matmul cpu_ops)
 target_link_libraries(test_rotary_embedding cpu_ops)
@@ -20,6 +21,7 @@ target_link_libraries(test_SimplifiedLayerNormalization_AVX2 cpu_ops)
 target_link_libraries(test_rmsnorm cpu_ops)
 target_link_libraries(test_elemwise_mul cpu_ops)
 target_link_libraries(test_linear cpu_ops)
+target_link_libraries(test_tensor tensor)
 
 set_target_properties(test_matmul PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set_target_properties(test_rotary_embedding PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -31,3 +33,4 @@ set_target_properties(test_SimplifiedLayerNormalization_AVX2 PROPERTIES RUNTIME_
 set_target_properties(test_rmsnorm PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set_target_properties(test_elemwise_mul PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set_target_properties(test_linear PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set_target_properties(test_tensor PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})

@@ -107,9 +107,9 @@ public:
             throw std::runtime_error("Error: One or more tensor keys not found in safetensors file.");
         }
 
-        gate_wt_ptr = reinterpret_cast<const float *>(st->tensorDataPtr(gate_wt_key));
-        up_wt_ptr = reinterpret_cast<const float *>(st->tensorDataPtr(up_wt_key));
-        down_wt_ptr = reinterpret_cast<const float *>(st->tensorDataPtr(down_wt_key));
+        gate_wt_ptr = st->tensorDataPtr<float>(gate_wt_key);
+        up_wt_ptr = st->tensorDataPtr<float>(up_wt_key);
+        down_wt_ptr = st->tensorDataPtr<float>(down_wt_key);
     }
 
     void optimized_qwen3_mlp(const float *input, const float *gate_weight, const float *up_weight,

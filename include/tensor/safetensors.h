@@ -61,7 +61,23 @@ public:
     void printHeader() const { json.print(); }
 
     // Returns pointer to tensor data (not owning)
-    const uint8_t *tensorDataPtr(const std::string &key) const;
+    template <typename T>
+    const T *tensorDataPtr(const std::string &key) const
+    {
+        const auto *info = json.get(key);
+        if (!info)
+            throw std::runtime_error("Tensor not found: " + key);
+
+        size_t start = info->data_offsets.first;
+        size_t end = info->data_offsets.second;
+
+        if (start >= data_size || end > data_size || start >= end)
+        {
+            throw std::runtime_error("Invalid data offsets for tensor: " + key);
+        }
+
+        return reinterpret_cast<const T *>(data + start);
+    }
     size_t tensorByteSize(const std::string &key) const;
 
     static bool windows_advise(void *ptr, size_t size) noexcept;

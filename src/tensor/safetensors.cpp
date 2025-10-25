@@ -293,23 +293,6 @@ bool Safetensor::windows_advise(void *ptr, size_t size) noexcept
     return fn(GetCurrentProcess(), 1, &range, 0) != 0;
 }
 
-const uint8_t *Safetensor::tensorDataPtr(const std::string &key) const
-{
-    const auto *info = json.get(key);
-    if (!info)
-        throw std::runtime_error("Tensor not found: " + key);
-
-    size_t start = info->data_offsets.first;
-    size_t end = info->data_offsets.second;
-
-    if (start >= data_size || end > data_size || start >= end)
-    {
-        throw std::runtime_error("Invalid data offsets for tensor: " + key);
-    }
-
-    return data + start;
-}
-
 size_t Safetensor::tensorByteSize(const std::string &key) const
 {
     const auto *info = json.get(key);
