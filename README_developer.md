@@ -19,17 +19,12 @@
         1. Exbedding 
         2. Qwen3DecoderLayer
             1. Qwen3Attention
-            2. Qwen3MLP
+            2. Qwen3MLP [DONE]
             3. Qwen3RMSNorm [DONE]
         3. Qwen3RotaryEmbedding
 
 ## Features :
-    1. Update safetensors for memory map weights
-    2. Tensor class :
-       1. wrapper on data
-       2. shape 
-       3. dtype
-       4. prefetch or prepare weights before hand
+    1. Add an avx optimised matmul for M=1
 
 ## Cleanups :
 1. Correct the name formatting in matmul avx. Should be M K N.

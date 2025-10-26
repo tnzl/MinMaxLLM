@@ -99,8 +99,8 @@ int main()
     const int num_heads = 32;
     const int kv_num_heads = 8;
     const int head_dim = 128;
-    const int seq_len = 42;
-    const int max_seq_len = 42;
+    const int seq_len = 1048;
+    const int max_seq_len = 1048;
     float scale = 1.0f / std::sqrt(static_cast<float>(head_dim));
 
     std::vector<float> query(num_heads * head_dim);
