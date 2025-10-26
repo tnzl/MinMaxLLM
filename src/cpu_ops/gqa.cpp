@@ -1,59 +1,128 @@
 #include <cpu_ops/gqa.h>
 #include <cpu_ops/softmax_avx2.h>
-#include <stdexcept>
+#include <vector>
+#include <cmath>
+#include <immintrin.h>
+#include <omp.h>
 
-GroupQueryAttention::GroupQueryAttention(int num_heads, int kv_num_heads, int head_dim, float scale)
-    : num_heads(num_heads), kv_num_heads(kv_num_heads), head_dim(head_dim) {
-    this->scale = (scale > 0) ? scale : 1.0f / std::sqrt(static_cast<float>(head_dim));
+#include <vector>
+#include <cmath>
+#include <immintrin.h>
+#include <omp.h>
+
+// Helper function for horizontal sum of AVX2 register
+inline float horizontal_sum_avx(__m256 vec)
+{
+    __m128 low = _mm256_castps256_ps128(vec);
+    __m128 high = _mm256_extractf128_ps(vec, 1);
+    low = _mm_add_ps(low, high);
+    __m128 shuf = _mm_movehdup_ps(low);
+    __m128 sums = _mm_add_ps(low, shuf);
+    shuf = _mm_movehl_ps(shuf, sums);
+    sums = _mm_add_ss(sums, shuf);
+    return _mm_cvtss_f32(sums);
 }
 
-std::vector<float> GroupQueryAttention::forward(const float* query, const float* key, const float* value, int seq_len) {
-    this->seq_len = seq_len;
-    if (num_heads % kv_num_heads != 0) {
-        throw std::invalid_argument("num_heads must be divisible by kv_num_heads");
+void optimized_gqa_forward(
+    const float *query, // [A, h] - single token query for all attention heads
+    const float *key,   // [G, N_max, h] - keys for all KV groups and positions
+    const float *value, // [G, N_max, h] - values for all KV groups and positions
+    float *output,      // [A, h] - output for all attention heads
+    int A,              // number of attention heads
+    int G,              // number of KV groups
+    int h,              // head dimension
+    int N,              // actual sequence length (N <= N_max)
+    int N_max,          // max sequence length
+    float scale         // scaling factor
+)
+{
+    // Calculate query heads per KV group
+    int heads_per_group = A / G;
+
+    // Precompute KV group mapping for each attention head - FIXED BUG
+    std::vector<int> head_to_group(A);
+    for (int a = 0; a < A; a++)
+    {
+        head_to_group[a] = a / heads_per_group; // CORRECT: each KV group serves multiple query heads
     }
-    const int group_size = num_heads / kv_num_heads;
-    std::vector<float> output(num_heads * head_dim, 0.0f);
-    std::vector<float> attention_scores(seq_len);
-    for (int h = 0; h < num_heads; ++h) {
-        const int kv_head_idx = h / group_size;
-        const float* curr_query = query + h * head_dim;
-        #pragma omp simd
-        for (int pos = 0; pos < seq_len; ++pos) {
-            const float* curr_key = key + pos * kv_num_heads * head_dim + kv_head_idx * head_dim;
-            __m256 dot_vec = _mm256_setzero_ps();
-            int d;
-            for (d = 0; d + 8 <= head_dim; d += 8) {
-                __m256 q_vec = _mm256_loadu_ps(curr_query + d);
-                __m256 k_vec = _mm256_loadu_ps(curr_key + d);
-                dot_vec = _mm256_fmadd_ps(q_vec, k_vec, dot_vec);
+
+// Parallelize over attention heads
+#pragma omp parallel for schedule(static)
+    for (int a = 0; a < A; a++)
+    {
+        int g = head_to_group[a];
+
+        // Get pointers to current head's data
+        const float *curr_query = query + a * h;
+        const float *curr_key_base = key + g * N_max * h;
+        const float *curr_value_base = value + g * N_max * h;
+        float *curr_output = output + a * h;
+
+        // Compute attention scores using AVX2
+        std::vector<float> attention_scores(N);
+
+        // Phase 1: Compute Q•K^T dot products
+        for (int pos = 0; pos < N; pos++)
+        {
+            const float *curr_key = curr_key_base + pos * h;
+
+            __m256 dot_sum = _mm256_setzero_ps();
+            int dim = 0;
+
+            // Process 8 elements at a time with AVX2
+            for (; dim <= h - 8; dim += 8)
+            {
+                __m256 q_vec = _mm256_loadu_ps(curr_query + dim);
+                __m256 k_vec = _mm256_loadu_ps(curr_key + dim);
+                __m256 mul = _mm256_mul_ps(q_vec, k_vec);
+                dot_sum = _mm256_add_ps(dot_sum, mul);
             }
-            alignas(32) float dot_arr[8];
-            _mm256_store_ps(dot_arr, dot_vec);
-            float dot = dot_arr[0] + dot_arr[1] + dot_arr[2] + dot_arr[3] +
-                        dot_arr[4] + dot_arr[5] + dot_arr[6] + dot_arr[7];
-            for (; d < head_dim; ++d) {
-                dot += curr_query[d] * curr_key[d];
+
+            // Horizontal sum of AVX2 register
+            float dot_product = horizontal_sum_avx(dot_sum);
+
+            // Handle remaining elements
+            for (; dim < h; dim++)
+            {
+                dot_product += curr_query[dim] * curr_key[dim];
             }
-            attention_scores[pos] = dot * scale;
+
+            attention_scores[pos] = dot_product * scale;
         }
-        softmax_avx2(attention_scores.data(), seq_len);
-        float* curr_output = output.data() + h * head_dim;
-        int pos = 0;
-        const float* first_value = value + pos * kv_num_heads * head_dim + kv_head_idx * head_dim;
-        float weight = attention_scores[pos];
-        #pragma omp simd
-        for (int d = 0; d < head_dim; ++d) {
-            curr_output[d] = weight * first_value[d];
+
+        // Phase 2: Apply softmax (using your optimized version)
+        softmax_avx2(attention_scores.data(), N);
+
+        // Phase 3: Compute weighted sum of values
+        // Initialize output to zero
+        for (int dim = 0; dim < h; dim++)
+        {
+            curr_output[dim] = 0.0f;
         }
-        for (pos = 1; pos < seq_len; ++pos) {
-            const float* curr_value = value + pos * kv_num_heads * head_dim + kv_head_idx * head_dim;
-            weight = attention_scores[pos];
-            #pragma omp simd
-            for (int d = 0; d < head_dim; ++d) {
-                curr_output[d] += weight * curr_value[d];
+
+        // Accumulate weighted values
+        for (int pos = 0; pos < N; pos++)
+        {
+            const float *curr_value = curr_value_base + pos * h;
+            float weight = attention_scores[pos];
+            __m256 weight_vec = _mm256_set1_ps(weight);
+
+            int dim = 0;
+            // Process 8 elements at a time with AVX2
+            for (; dim <= h - 8; dim += 8)
+            {
+                __m256 out_vec = _mm256_loadu_ps(curr_output + dim);
+                __m256 val_vec = _mm256_loadu_ps(curr_value + dim);
+                __m256 weighted = _mm256_mul_ps(weight_vec, val_vec);
+                out_vec = _mm256_add_ps(out_vec, weighted);
+                _mm256_storeu_ps(curr_output + dim, out_vec);
+            }
+
+            // Handle remaining elements
+            for (; dim < h; dim++)
+            {
+                curr_output[dim] += weight * curr_value[dim];
             }
         }
     }
-    return output;
 }

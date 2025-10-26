@@ -6,39 +6,20 @@
 #include <cpu_ops/exp_avx2.h>
 #include <cpu_ops/softmax_avx2.h>
 
-/**
- * @class GroupQueryAttention
- * @brief Implements Grouped Query Attention (GQA) mechanism with AVX2 optimizations.
- *
- * This class computes attention for transformer models using grouped query attention.
- * It supports AVX2-optimized softmax for efficient computation.
- */
-class GroupQueryAttention {
-private:
-    int num_heads;          // Number of query heads
-    int kv_num_heads;       // Number of key/value heads
-    int head_dim;           // Dimension of each head
-    float scale;            // Scaling factor (1/sqrt(head_dim))
-    int seq_len;           // Sequence length
+#include <vector>
+#include <cmath>
+#include <immintrin.h>
+#include <omp.h>
 
-public:
-    /**
-     * @brief Constructor for GroupQueryAttention.
-     * @param num_heads Number of query heads
-     * @param kv_num_heads Number of key/value heads
-     * @param head_dim Dimension of each head
-     * @param scale Scaling factor (default: -1.0f, computed as 1/sqrt(head_dim) if negative)
-     */
-    GroupQueryAttention(int num_heads, int kv_num_heads, int head_dim, float scale = -1.0f);
-
-    /**
-     * @brief Compute attention for a single query position.
-     *
-     * @param query Pointer to query tensor [num_heads, head_dim]
-     * @param key Pointer to key tensor [seq_len, kv_num_heads, head_dim]
-     * @param value Pointer to value tensor [seq_len, kv_num_heads, head_dim]
-     * @param seq_len Sequence length
-     * @return std::vector<float> Output tensor [num_heads, head_dim]
-     */
-    std::vector<float> forward(const float* query, const float* key, const float* value, int seq_len);
-};
+void optimized_gqa_forward(
+    const float *query, // [A, h] - single token query for all attention heads
+    const float *key,   // [G, N_max, h] - keys for all KV groups and positions
+    const float *value, // [G, N_max, h] - values for all KV groups and positions
+    float *output,      // [A, h] - output for all attention heads
+    int A,              // number of attention heads
+    int G,              // number of KV groups
+    int h,              // head dimension
+    int N,              // actual sequence length (N <= N_max)
+    int N_max,          // max sequence length
+    float scale         // scaling factor
+);
