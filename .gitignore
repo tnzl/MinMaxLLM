@@ -20,6 +20,7 @@ Makefile
 .idea/
 *.swp
 *~
+.VSCodeCounter/
 
 # CUDA-specific
 *.ptx

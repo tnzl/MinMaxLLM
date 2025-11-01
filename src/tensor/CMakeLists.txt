@@ -2,4 +2,5 @@
 add_library(tensor STATIC
     ${CMAKE_SOURCE_DIR}/src/tensor/safetensors.cpp
     ${CMAKE_SOURCE_DIR}/src/tensor/tensor.cpp
+    ${CMAKE_SOURCE_DIR}/src/tensor/kvcache.cpp
 )
