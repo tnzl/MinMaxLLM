@@ -67,11 +67,10 @@ void checkWorkingSet(const void *ptr, size_t bytes)
 // ------------------------------------------------------------
 // Utility: measure latency of reading one float per 4KB page
 // ------------------------------------------------------------
-template <typename T>
-void measureAccessLatency(const Tensor<T> &tensor, const string &label)
+void measureAccessLatencyFloat(const Tensor &tensor, const string &label)
 {
-    const T *ptr = tensor.data();
-    size_t step = 4096 / sizeof(T);
+    const float *ptr = tensor.data<float>();
+    size_t step = 4096 / sizeof(float);
     volatile double sum = 0.0;
 
     auto start = high_resolution_clock::now();
@@ -86,11 +85,11 @@ void measureAccessLatency(const Tensor<T> &tensor, const string &label)
 // ------------------------------------------------------------
 // Test modes
 // ------------------------------------------------------------
-void test_prefetch(Tensor<float> &tensor)
+void test_prefetch(Tensor &tensor)
 {
     printMemoryStats("Before prefetch()");
-    checkWorkingSet(tensor.data(), tensor.size() * sizeof(float));
-    measureAccessLatency(tensor, "Before prefetch()");
+    checkWorkingSet(tensor.data<float>(), tensor.nbytes());
+    measureAccessLatencyFloat(tensor, "Before prefetch()");
 
     cout << "\nTesting prefetch()...\n";
     auto t0 = high_resolution_clock::now();
@@ -101,15 +100,15 @@ void test_prefetch(Tensor<float> &tensor)
          << " | duration: " << duration_cast<milliseconds>(t1 - t0).count() << " ms\n";
 
     printMemoryStats("After prefetch()");
-    checkWorkingSet(tensor.data(), tensor.size() * sizeof(float));
-    measureAccessLatency(tensor, "After prefetch()");
+    checkWorkingSet(tensor.data<float>(), tensor.nbytes());
+    measureAccessLatencyFloat(tensor, "After prefetch()");
 }
 
-void test_async_prefetch(Tensor<float> &tensor)
+void test_async_prefetch(Tensor &tensor)
 {
     printMemoryStats("Before async prefetch()");
-    checkWorkingSet(tensor.data(), tensor.size() * sizeof(float));
-    measureAccessLatency(tensor, "Before async prefetch()");
+    checkWorkingSet(tensor.data<float>(), tensor.nbytes());
+    measureAccessLatencyFloat(tensor, "Before async prefetch()");
 
     cout << "\nTesting prefetch_async()...\n";
     auto t0 = high_resolution_clock::now();
@@ -122,8 +121,8 @@ void test_async_prefetch(Tensor<float> &tensor)
     this_thread::sleep_for(seconds(5));
 
     printMemoryStats("After async prefetch()");
-    checkWorkingSet(tensor.data(), tensor.size() * sizeof(float));
-    measureAccessLatency(tensor, "After async prefetch()");
+    checkWorkingSet(tensor.data<float>(), tensor.nbytes());
+    measureAccessLatencyFloat(tensor, "After async prefetch()");
 }
 
 // ------------------------------------------------------------
@@ -151,10 +150,10 @@ int main(int argc, char **argv)
     }
 
     const float *data = st.tensorDataPtr<float>(key);
-    Tensor<float> tensor(const_cast<float *>(data), info->shape, true);
+    Tensor tensor(const_cast<float *>(data), info->shape, DataType::F32, true);
 
     cout << "Tensor under test: " << key << " | size = "
-         << (tensor.size() * sizeof(float)) / (1024.0 * 1024.0) << " MB\n";
+         << (tensor.nbytes()) / (1024.0 * 1024.0) << " MB\n";
 
     if (mode == "--prefetch")
         test_prefetch(tensor);

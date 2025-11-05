@@ -1,5 +1,6 @@
 #include <tensor/tensor.h>
 #include <utility>
+#include <cstring>
 
 PrefetchManager &PrefetchManager::instance()
 {
@@ -74,55 +75,48 @@ void PrefetchManager::worker_loop()
     }
 }
 
-template <typename T>
-Tensor<T>::Tensor() = default;
+Tensor::Tensor() = default;
 
-template <typename T>
-Tensor<T>::Tensor(const std::vector<size_t> &shape)
-    : shape_(shape), is_mmapped_(false), is_mem_owner_(true)
+Tensor::Tensor(DataType dtype, const std::vector<size_t> &shape)
+    : shape_(shape), dtype_(dtype), is_mmapped_(false), is_mem_owner_(true)
 {
-    size_t n = compute_num_elements(shape_);
-    if (n > 0)
-        data_ = new T[n];
+    size_t bytes = nbytes();
+    if (bytes > 0)
+        data_ = ::operator new[](bytes);
 }
 
-template <typename T>
-Tensor<T>::Tensor(T *data, const std::vector<size_t> &shape, bool is_mmapped, bool take_ownership)
-    : data_(data), shape_(shape), is_mmapped_(is_mmapped), is_mem_owner_(take_ownership)
+Tensor::Tensor(void *data, const std::vector<size_t> &shape, DataType dtype, bool is_mmapped, bool take_ownership)
+    : data_(data), shape_(shape), dtype_(dtype), is_mmapped_(is_mmapped), is_mem_owner_(take_ownership)
 {
 }
 
-template <typename T>
-Tensor<T>::Tensor(const T *data, const std::vector<size_t> &shape, bool is_mmapped, bool take_ownership)
-    : shape_(shape), is_mmapped_(is_mmapped)
+Tensor::Tensor(const void *data, const std::vector<size_t> &shape, DataType dtype, bool is_mmapped, bool take_ownership)
+    : shape_(shape), dtype_(dtype), is_mmapped_(is_mmapped)
 {
     if (take_ownership)
     {
-        // cannot take ownership of const data safely
         throw std::invalid_argument("Cannot take ownership of const data pointer");
     }
-    // store pointer (const_cast only for storage; we do NOT free it later)
-    data_ = const_cast<T *>(data);
+    data_ = const_cast<void *>(data);
     is_mem_owner_ = false;
 }
 
-template <typename T>
-Tensor<T>::Tensor(Tensor &&other) noexcept
-    : data_(other.data_), shape_(std::move(other.shape_)), is_mmapped_(other.is_mmapped_), is_mem_owner_(other.is_mem_owner_)
+Tensor::Tensor(Tensor &&other) noexcept
+    : data_(other.data_), shape_(std::move(other.shape_)), dtype_(other.dtype_), is_mmapped_(other.is_mmapped_), is_mem_owner_(other.is_mem_owner_)
 {
     other.data_ = nullptr;
     other.is_mem_owner_ = false;
     other.is_mmapped_ = false;
 }
 
-template <typename T>
-Tensor<T> &Tensor<T>::operator=(Tensor &&other) noexcept
+Tensor &Tensor::operator=(Tensor &&other) noexcept
 {
     if (this != &other)
     {
         release_owned();
         data_ = other.data_;
         shape_ = std::move(other.shape_);
+        dtype_ = other.dtype_;
         is_mmapped_ = other.is_mmapped_;
         is_mem_owner_ = other.is_mem_owner_;
         other.data_ = nullptr;
@@ -132,49 +126,50 @@ Tensor<T> &Tensor<T>::operator=(Tensor &&other) noexcept
     return *this;
 }
 
-template <typename T>
-Tensor<T>::~Tensor()
+Tensor::~Tensor()
 {
     release_owned();
 }
 
-template <typename T>
-T *Tensor<T>::data() noexcept { return data_; }
+size_t Tensor::element_size(DataType dt) noexcept
+{
+    switch (dt)
+    {
+    case DataType::F32:
+        return sizeof(float);
+    case DataType::F64:
+        return sizeof(double);
+    case DataType::I32:
+        return sizeof(int32_t);
+    case DataType::U8:
+        return sizeof(uint8_t);
+    default:
+        return 1;
+    }
+}
 
-template <typename T>
-const T *Tensor<T>::data() const noexcept { return data_; }
-
-template <typename T>
-const std::vector<size_t> &Tensor<T>::shape() const noexcept { return shape_; }
-
-template <typename T>
-size_t Tensor<T>::size() const noexcept { return compute_num_elements(shape_); }
-
-template <typename T>
-bool Tensor<T>::prefetch() const noexcept
+bool Tensor::prefetch() const noexcept
 {
     if (!data_ || size() == 0 || !is_mmapped_)
         return false;
 
     WIN32_MEMORY_RANGE_ENTRY range;
     range.VirtualAddress = static_cast<void *>(data_);
-    range.NumberOfBytes = static_cast<SIZE_T>(size() * sizeof(T));
+    range.NumberOfBytes = static_cast<SIZE_T>(nbytes());
 
     BOOL result = PrefetchVirtualMemory(GetCurrentProcess(), 1, &range, 0);
     return result != FALSE;
 }
 
-template <typename T>
-void Tensor<T>::prefetch_async() const noexcept
+void Tensor::prefetch_async() const noexcept
 {
     if (!data_ || size() == 0 || !is_mmapped_)
         return;
 
-    PrefetchManager::instance().enqueue(static_cast<void *>(data_), size() * sizeof(T));
+    PrefetchManager::instance().enqueue(static_cast<void *>(data_), nbytes());
 }
 
-template <typename T>
-void Tensor<T>::reshape(const std::vector<size_t> &new_shape)
+void Tensor::reshape(const std::vector<size_t> &new_shape)
 {
     size_t old_count = size();
     size_t new_count = compute_num_elements(new_shape);
@@ -183,14 +178,7 @@ void Tensor<T>::reshape(const std::vector<size_t> &new_shape)
     shape_ = new_shape;
 }
 
-template <typename T>
-void Tensor<T>::mark_mmapped(bool mmapped) noexcept { is_mmapped_ = mmapped; }
-
-template <typename T>
-void Tensor<T>::take_ownership(bool take) noexcept { is_mem_owner_ = take; }
-
-template <typename T>
-size_t Tensor<T>::compute_num_elements(const std::vector<size_t> &shape)
+size_t Tensor::compute_num_elements(const std::vector<size_t> &shape)
 {
     size_t n = 1;
     for (size_t d : shape)
@@ -202,19 +190,13 @@ size_t Tensor<T>::compute_num_elements(const std::vector<size_t> &shape)
     return n;
 }
 
-template <typename T>
-void Tensor<T>::release_owned()
+void Tensor::release_owned()
 {
     if (is_mem_owner_ && data_)
     {
-        delete[] data_;
+        ::operator delete[](data_);
         data_ = nullptr;
         is_mem_owner_ = false;
     }
 }
 
-// Explicit template instantiation for common types
-template class Tensor<float>;
-template class Tensor<double>;
-template class Tensor<int>;
-template class Tensor<uint8_t>;
