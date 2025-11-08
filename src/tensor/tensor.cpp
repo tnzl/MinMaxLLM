@@ -1,6 +1,7 @@
 #include <tensor/tensor.h>
 #include <utility>
 #include <cstring>
+#include <malloc.h>
 
 PrefetchManager &PrefetchManager::instance()
 {
@@ -82,7 +83,11 @@ Tensor::Tensor(DataType dtype, const std::vector<size_t> &shape)
 {
     size_t bytes = nbytes();
     if (bytes > 0)
-        data_ = ::operator new[](bytes);
+    {
+        data_ = _aligned_malloc(bytes, 64);
+        if (!data_)
+            throw std::bad_alloc();
+    }
 }
 
 Tensor::Tensor(void *data, const std::vector<size_t> &shape, DataType dtype, bool is_mmapped, bool take_ownership)
@@ -194,7 +199,7 @@ void Tensor::release_owned()
 {
     if (is_mem_owner_ && data_)
     {
-        ::operator delete[](data_);
+        _aligned_free(data_);
         data_ = nullptr;
         is_mem_owner_ = false;
     }

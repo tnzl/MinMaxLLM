@@ -4,6 +4,8 @@
 #include <memory>
 #include <vector>
 
+// TODO : Add base(theta) as a class member
+
 /**
  * @class RotaryEmbeddingAVX2
  * @brief Efficient rotary positional embedding with AVX2 optimizations.

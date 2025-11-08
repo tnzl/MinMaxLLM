@@ -498,7 +498,7 @@ int main(int argc, char **argv)
             RotaryEmbeddingAVX2::precompute(
                 sin_cache_tensor.data<float>(),
                 cos_cache_tensor.data<float>(),
-                static_cast<int>(max_seq_len), // TODO : this value is incorrect
+                static_cast<int>(max_seq_len),
                 static_cast<int>(head_dim),
                 1000000.0f);
             timer.stop();
@@ -583,6 +583,21 @@ int main(int argc, char **argv)
                                              "updated sequence length"))
         {
             // return 1;
+        }
+
+        {
+            // compare input_tensor and input_flat if they're equal
+            for (std::size_t i = 0; i < embed_dim; ++i)
+            {
+                if (input_tensor.data<float>()[i] != input_flat[i])
+                {
+                    log_error("Input tensor and input flat mismatch at index " + std::to_string(i) +
+                              " (value=" + std::to_string(input_tensor.data<float>()[i]) +
+                              ", expected=" + std::to_string(input_flat[i]) +
+                              ", diff=" + std::to_string(std::fabs(input_tensor.data<float>()[i] - input_flat[i])) + ")");
+                }
+            }
+            log_success("Input tensor and input flat match after self_attn.run");
         }
 
         {

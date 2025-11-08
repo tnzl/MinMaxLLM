@@ -36,6 +36,8 @@ SelfAttention::SelfAttention(
 SelfAttention::~SelfAttention()
 {
     delete rope;
+    
+    // TODO : Free query, key, value buffers when last self attention is destroyed
 }
 
 void SelfAttention::prepare()
