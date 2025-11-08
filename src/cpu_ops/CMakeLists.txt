@@ -9,6 +9,8 @@ add_library(cpu_ops STATIC
     ${CMAKE_SOURCE_DIR}/src/cpu_ops/softmax_avx2.cpp
     ${CMAKE_SOURCE_DIR}/src/cpu_ops/rmsnorm.cpp
     ${CMAKE_SOURCE_DIR}/src/cpu_ops/elemwise_mul.cpp
+    ${CMAKE_SOURCE_DIR}/src/cpu_ops/elemwise_add.cpp
     ${CMAKE_SOURCE_DIR}/src/cpu_ops/linear.cpp
     ${CMAKE_SOURCE_DIR}/src/cpu_ops/self_attention.cpp
+    ${CMAKE_SOURCE_DIR}/src/cpu_ops/decoder.cpp
 )
