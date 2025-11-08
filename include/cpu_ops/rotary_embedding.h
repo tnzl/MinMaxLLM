@@ -68,7 +68,7 @@ public:
                           float* cos_cache,
                           int max_positions,
                           int dim,
-                          float base = 10000.0f);
+                          float base = 1000000.0f);
 };
 
 #endif // ROTARY_EMBEDDING_H

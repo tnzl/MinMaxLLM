@@ -140,10 +140,9 @@ void printErrorAnalysis(float* C1, float* C2, int M, int N) {
               << (100.0f * significant_errors) / (M * N) << "%)\n";
 }
 
-void printErrorAnalysis1D(const float* ref, const float* actual, size_t N) {
+void printErrorAnalysis1D(const float* ref, const float* actual, size_t N, float threshold = 1e-4f) {
     float l2_error = 0.0f, max_error = 0.0f, sum_ref = 0.0f, sum_actual = 0.0f;
     int significant_errors = 0;
-    const float threshold = 1e-4f;
     for (size_t i = 0; i < N; ++i) {
         float diff = ref[i] - actual[i];
         l2_error += diff * diff;

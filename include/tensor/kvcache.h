@@ -16,8 +16,8 @@ private:
     size_t current_token_idx_;
 
     // Contiguous KV cache storage
-    float *key_cache_;   // [layer * group * seq_len * head_dim]
-    float *value_cache_; // [layer * group * seq_len * head_dim]
+    float *key_cache_;   // [num_layers_ * num_groups_ * max_sequence_length_ * head_dim_]
+    float *value_cache_; // [num_layers_ * num_groups_ * max_sequence_length_ * head_dim_]
 
     // Helper function to calculate memory offsets
     size_t get_key_offset(size_t layer, size_t group, size_t token_idx) const;
@@ -33,16 +33,16 @@ public:
     KVCache &operator=(const KVCache &) = delete;
 
     // Get key pointer for specific layer and group at current token
-    float *get_key_ptr(size_t layer, size_t group);
+    float *get_key_ptr(size_t layer, size_t group=0);
 
     // Get value pointer for specific layer and group at current token
-    float *get_value_ptr(size_t layer, size_t group);
+    float *get_value_ptr(size_t layer, size_t group=0);
 
     // Get const key pointer for full key memory of specific layer and group
-    const float *get_key_memory_ptr(size_t layer, size_t group) const;
+    const float *get_key_memory_ptr(size_t layer, size_t group=0) const;
 
     // Get const value pointer for full value memory of specific layer and group
-    const float *get_value_memory_ptr(size_t layer, size_t group) const;
+    const float *get_value_memory_ptr(size_t layer, size_t group=0) const;
 
     // Get const key pointer for entire key cache
     const float *get_full_key_cache_ptr() const;
