@@ -24,7 +24,8 @@ endif()
 
 # Add subdirectories for cpu_ops and tests
 add_subdirectory(src/cpu_ops)
+add_subdirectory(src/tensor)
+add_subdirectory(src/models)
 add_subdirectory(tests/cpu_ops)
 add_subdirectory(tests/modules)
-add_subdirectory(src/tensor)
 add_subdirectory(tests/tensor)
