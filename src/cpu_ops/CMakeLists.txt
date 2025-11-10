@@ -14,3 +14,5 @@ add_library(cpu_ops STATIC
     ${CMAKE_SOURCE_DIR}/src/cpu_ops/self_attention.cpp
     ${CMAKE_SOURCE_DIR}/src/cpu_ops/decoder.cpp
 )
+
+target_link_libraries(cpu_ops PUBLIC tensor)
