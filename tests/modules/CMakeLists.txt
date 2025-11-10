@@ -4,6 +4,7 @@ add_executable(run_safetensors ${CMAKE_SOURCE_DIR}/tests/modules/safetensors/run
 add_executable(run_Qwen3MLP ${CMAKE_SOURCE_DIR}/tests/modules/Qwen3MLP/run_Qwen3MLP.cpp)
 add_executable(run_SelfAttention ${CMAKE_SOURCE_DIR}/tests/modules/SelfAttention/run_SelfAttention.cpp)
 add_executable(run_Qwen3Decoder ${CMAKE_SOURCE_DIR}/tests/modules/Qwen3Decoder/run_Qwen3Decoder.cpp)
+add_executable(run_Qwen3Model ${CMAKE_SOURCE_DIR}/tests/modules/Qwen3Model/run_qwen3model.cpp)
 
 target_link_libraries(run_Qwen3RMSNorm cpu_ops)
 target_link_libraries(run_Qwen3MLPGate cpu_ops)
@@ -11,6 +12,7 @@ target_link_libraries(run_safetensors tensor)
 target_link_libraries(run_Qwen3MLP cpu_ops tensor)
 target_link_libraries(run_SelfAttention cpu_ops tensor)
 target_link_libraries(run_Qwen3Decoder cpu_ops tensor)
+target_link_libraries(run_Qwen3Model models)
 
 set_target_properties(run_Qwen3RMSNorm PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set_target_properties(run_Qwen3MLPGate PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -18,3 +20,4 @@ set_target_properties(run_safetensors PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAK
 set_target_properties(run_Qwen3MLP PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set_target_properties(run_SelfAttention PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set_target_properties(run_Qwen3Decoder PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set_target_properties(run_Qwen3Model PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})

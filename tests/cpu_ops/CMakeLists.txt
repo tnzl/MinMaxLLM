@@ -21,7 +21,7 @@ target_link_libraries(test_SimplifiedLayerNormalization_AVX2 cpu_ops)
 target_link_libraries(test_rmsnorm cpu_ops)
 target_link_libraries(test_elemwise_mul cpu_ops)
 target_link_libraries(test_elemwise_add cpu_ops)
-target_link_libraries(test_linear cpu_ops)
+target_link_libraries(test_linear cpu_ops tensor)
 
 set_target_properties(test_matmul PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set_target_properties(test_rotary_embedding PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
