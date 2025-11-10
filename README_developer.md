@@ -14,6 +14,7 @@
     4. 8 bit quantization
     5. sampling strategies, maube implement topk type ops.
     6. Enable tensor.to(device); // device can be ram gpu etc
+    7. Feature : Build your LLM. Make the components super configurable. for example : decoder bloc can be configured with the type of rope, attn block, mlp etc. this requires reading more llm arch classes in transformers. Aim is to cover all architectures just from config. 
 
 ### Cleanups :
     1. Correct the name formatting in matmul avx. Should be M K N.
