@@ -4,7 +4,6 @@
 #include <omp.h>
 #include <cstdio>
 #include <memory>
-#include <unordered_map>
 
 class Tensor;
 
@@ -42,5 +41,4 @@ private:
     MatmulImplType impl_type_ = MatmulImplType::AVX2;
     std::unique_ptr<Tensor> owned_weight_;
 
-    static std::unordered_map<MatmulImplType, ImplFunction> impl_registry_;
 };

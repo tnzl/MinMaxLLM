@@ -110,10 +110,6 @@ void linear_avx2_omp(const float *input, const float *weight, int M, int K, int 
     }
 }
 
-std::unordered_map<MatmulImplType, LinearOp::ImplFunction> LinearOp::impl_registry_ = {
-    {MatmulImplType::NAIVE, &LinearOp::naive_impl},
-    {MatmulImplType::AVX2, &LinearOp::avx2_impl}};
-
 LinearOp::LinearOp(MatmulImplType impl_type) : impl_type_(impl_type)
 {
 }
@@ -152,25 +148,31 @@ void LinearOp::run(Tensor &input, Tensor &weight, Tensor &output)
 void LinearOp::run_internal(Tensor &input, Tensor &weight, Tensor &output)
 {
     MatmulImplType selected = resolve_impl(input, weight);
-    auto it = impl_registry_.find(selected);
-    if (it == impl_registry_.end())
+    switch (selected)
     {
+    case MatmulImplType::NAIVE:
+        naive_impl(input, weight, output);
+        break;
+    case MatmulImplType::AVX2:
+        avx2_impl(input, weight, output);
+        break;
+    default:
         throw std::runtime_error("No implementation registered for selected MatmulImplType.");
     }
-
-    it->second(input, weight, output);
 }
 
 MatmulImplType LinearOp::resolve_impl(Tensor &input, Tensor &weight) const
 {
     const LinearDims dims = compute_linear_dims(input, weight);
 
-    if (impl_registry_.count(impl_type_))
+    switch (impl_type_)
     {
+    case MatmulImplType::NAIVE:
+    case MatmulImplType::AVX2:
         return impl_type_;
+    default:
+        return MatmulImplType::NAIVE;
     }
-
-    return MatmulImplType::NAIVE;
 }
 
 void LinearOp::naive_impl(Tensor &input, Tensor &weight, Tensor &output)

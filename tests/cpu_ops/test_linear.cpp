@@ -16,10 +16,10 @@ int main()
     // Allocate aligned memory
     float *A = static_cast<float *>(_aligned_malloc(M * K * sizeof(float), 32));
     float *B = static_cast<float *>(_aligned_malloc(N * K * sizeof(float), 32));
-    float *C_opt = static_cast<float *>(_aligned_malloc(M * N * sizeof(float), 32));
-    float *C_naive = static_cast<float *>(_aligned_malloc(M * N * sizeof(float), 32));
-    float *C_linear_owned = static_cast<float *>(_aligned_malloc(M * N * sizeof(float), 32));
-    float *C_linear_runtime = static_cast<float *>(_aligned_malloc(M * N * sizeof(float), 32));
+    float *C_linear_naive_owned = static_cast<float *>(_aligned_malloc(M * N * sizeof(float), 32));
+    float *C_linear_naive_runtime = static_cast<float *>(_aligned_malloc(M * N * sizeof(float), 32));
+    float *C_linear_avx_owned = static_cast<float *>(_aligned_malloc(M * N * sizeof(float), 32));
+    float *C_linear_avx_runtime = static_cast<float *>(_aligned_malloc(M * N * sizeof(float), 32));
 
     // Initialize with random values
     std::random_device rd;
@@ -31,70 +31,70 @@ int main()
     for (int i = 0; i < K * N; ++i)
         B[i] = dist(gen);
 
-    // Test 1: Correctness check
-    std::cout << "Running correctness test...\n";
-    linear_naive(A, B, M, K, N, C_naive);
-    int iterations = 100;
-    long long naive_total = 0;
-    long long opt_total = 0;
-    {
-        for (int i = 0; i < iterations; i++)
-        {
-            auto start = std::chrono::high_resolution_clock::now();
-            linear_naive(A, B, M, K, N, C_naive);
-            auto end = std::chrono::high_resolution_clock::now();
-            naive_total += std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-        }
-        std::cout << "\nNaive Linear Latency " << naive_total / iterations << " us.\n";
-    }
-    {
-        for (int i = 0; i < iterations; i++)
-        {
-            auto start = std::chrono::high_resolution_clock::now();
-            linear_avx2_omp(A, B, M, K, N, C_opt);
-            auto end = std::chrono::high_resolution_clock::now();
-            opt_total += std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-        }
-        std::cout << "\nAVX Linear Latency " << opt_total / iterations << " us.\n";
-    }
+    std::cout << "Running LinearOp tests...\n";
 
-    {
-        Tensor input_tensor(static_cast<void *>(A), {static_cast<size_t>(M), static_cast<size_t>(K)}, DataType::F32, false, false);
-        Tensor weight_tensor(static_cast<void *>(B), {static_cast<size_t>(N), static_cast<size_t>(K)}, DataType::F32, false, false);
-        Tensor output_tensor(static_cast<void *>(C_linear_owned), {static_cast<size_t>(M), static_cast<size_t>(N)}, DataType::F32, false, false);
+    Tensor input_tensor(static_cast<void *>(A), {static_cast<size_t>(M), static_cast<size_t>(K)}, DataType::F32, false, false);
 
-        LinearOp linear_with_owned_weight(std::move(weight_tensor));
-        linear_with_owned_weight.prepare();
+    // Owned-weight path
+    {
+        Tensor weight_owned_naive(static_cast<void *>(B), {static_cast<size_t>(N), static_cast<size_t>(K)}, DataType::F32, false, false);
+        Tensor weight_owned_avx(static_cast<void *>(B), {static_cast<size_t>(N), static_cast<size_t>(K)}, DataType::F32, false, false);
+        Tensor output_naive(static_cast<void *>(C_linear_naive_owned), {static_cast<size_t>(M), static_cast<size_t>(N)}, DataType::F32, false, false);
+        Tensor output_avx(static_cast<void *>(C_linear_avx_owned), {static_cast<size_t>(M), static_cast<size_t>(N)}, DataType::F32, false, false);
+
+        LinearOp linear_naive_owned(std::move(weight_owned_naive), MatmulImplType::NAIVE);
+        LinearOp linear_avx_owned(std::move(weight_owned_avx), MatmulImplType::AVX2);
+
+        linear_naive_owned.prepare();
+        linear_avx_owned.prepare();
 
         auto start = std::chrono::high_resolution_clock::now();
-        linear_with_owned_weight.run(input_tensor, output_tensor);
+        linear_naive_owned.run(input_tensor, output_naive);
         auto end = std::chrono::high_resolution_clock::now();
-        std::cout << "\nLinearOp (stored weight) Latency "
+        std::cout << "\nLinearOp (owned weight, NAIVE) Latency "
                   << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()
                   << " us.\n";
-
-        Tensor weight_runtime(static_cast<void *>(B), {static_cast<size_t>(N), static_cast<size_t>(K)}, DataType::F32, false, false);
-        Tensor output_runtime(static_cast<void *>(C_linear_runtime), {static_cast<size_t>(M), static_cast<size_t>(N)}, DataType::F32, false, false);
-        LinearOp linear_runtime{MatmulImplType::AVX2};
 
         start = std::chrono::high_resolution_clock::now();
-        linear_runtime.run(input_tensor, weight_runtime, output_runtime);
+        linear_avx_owned.run(input_tensor, output_avx);
         end = std::chrono::high_resolution_clock::now();
-        std::cout << "LinearOp (runtime weight) Latency "
+        std::cout << "LinearOp (owned weight, AVX2) Latency "
                   << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()
                   << " us.\n";
+
+        printErrorAnalysis(C_linear_naive_owned, C_linear_avx_owned, M, N, "LinearOp owned weight (AVX2 vs NAIVE)");
     }
 
-    printErrorAnalysis(C_naive, C_opt, M, N);
-    std::cout << "Speedup: " << static_cast<float>(naive_total) / static_cast<float>(opt_total) << "x\n";
+    // Runtime-weight path
+    {
+        Tensor weight_runtime(static_cast<void *>(B), {static_cast<size_t>(N), static_cast<size_t>(K)}, DataType::F32, false, false);
+        Tensor output_naive(static_cast<void *>(C_linear_naive_runtime), {static_cast<size_t>(M), static_cast<size_t>(N)}, DataType::F32, false, false);
+        Tensor output_avx(static_cast<void *>(C_linear_avx_runtime), {static_cast<size_t>(M), static_cast<size_t>(N)}, DataType::F32, false, false);
 
-    printErrorAnalysis(C_naive, C_linear_owned, M, N);
-    printErrorAnalysis(C_naive, C_linear_runtime, M, N);
+        LinearOp linear_naive_runtime(MatmulImplType::NAIVE);
+        LinearOp linear_avx_runtime(MatmulImplType::AVX2);
+
+        auto start = std::chrono::high_resolution_clock::now();
+        linear_naive_runtime.run(input_tensor, weight_runtime, output_naive);
+        auto end = std::chrono::high_resolution_clock::now();
+        std::cout << "\nLinearOp (runtime weight, NAIVE) Latency "
+                  << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()
+                  << " us.\n";
+
+        start = std::chrono::high_resolution_clock::now();
+        linear_avx_runtime.run(input_tensor, weight_runtime, output_avx);
+        end = std::chrono::high_resolution_clock::now();
+        std::cout << "LinearOp (runtime weight, AVX2) Latency "
+                  << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()
+                  << " us.\n";
+
+        printErrorAnalysis(C_linear_naive_runtime, C_linear_avx_runtime, M, N, "LinearOp runtime weight (AVX2 vs NAIVE)");
+    }
 
     _aligned_free(A);
     _aligned_free(B);
-    _aligned_free(C_opt);
-    _aligned_free(C_naive);
-    _aligned_free(C_linear_owned);
-    _aligned_free(C_linear_runtime);
+    _aligned_free(C_linear_naive_owned);
+    _aligned_free(C_linear_naive_runtime);
+    _aligned_free(C_linear_avx_owned);
+    _aligned_free(C_linear_avx_runtime);
 }

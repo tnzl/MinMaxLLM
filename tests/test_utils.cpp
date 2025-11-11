@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <numeric>
 #include <vector>
+#include <string>
 #include <sstream>
 #include <fstream>
 
@@ -105,7 +106,7 @@ float calculateMaxError(float* C1, float* C2, int M, int N) {
     return max_error;
 }
 
-void printErrorAnalysis(float* C1, float* C2, int M, int N) {
+void printErrorAnalysis(float* C1, float* C2, int M, int N, const std::string& label = "") {
     // Calculate various error metrics
     float l2_error = calculateL2Error(C1, C2, M, N);
     float max_error = calculateMaxError(C1, C2, M, N);
@@ -121,7 +122,11 @@ void printErrorAnalysis(float* C1, float* C2, int M, int N) {
     float norm_actual = std::sqrt(sum_actual);
     float relative_error = std::fabs(norm_ref - norm_actual) / norm_ref;
     
-    std::cout << "\nError Analysis:\n";
+    if (!label.empty()) {
+        std::cout << "\nError Analysis (" << label << "):\n";
+    } else {
+        std::cout << "\nError Analysis:\n";
+    }
     std::cout << "L2 Error: " << l2_error << "\n";
     std::cout << "Max Error: " << max_error << "\n";
     std::cout << "Relative Error (Frobenius norm): " << relative_error * 100 << "%\n";
