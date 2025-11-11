@@ -110,12 +110,12 @@ void linear_avx2_omp(const float *input, const float *weight, int M, int K, int 
     }
 }
 
-LinearOp::LinearOp(MatmulImplType impl_type) : impl_type_(impl_type)
+LinearOp::LinearOp(OpBackend backend) : BaseOp(backend)
 {
 }
 
 // callers can hand over temporaries or moved lvalues, while we still move once into owned_weight_
-LinearOp::LinearOp(Tensor &&weight, MatmulImplType impl_type) : impl_type_(impl_type)
+LinearOp::LinearOp(Tensor &&weight, OpBackend backend) : BaseOp(backend)
 {
     owned_weight_ = std::make_unique<Tensor>(std::move(weight));
 }
@@ -147,31 +147,34 @@ void LinearOp::run(Tensor &input, Tensor &weight, Tensor &output)
 
 void LinearOp::run_internal(Tensor &input, Tensor &weight, Tensor &output)
 {
-    MatmulImplType selected = resolve_impl(input, weight);
+    LinearImplType selected = resolve_impl(input, weight);
     switch (selected)
     {
-    case MatmulImplType::NAIVE:
+    case LinearImplType::NAIVE:
         naive_impl(input, weight, output);
         break;
-    case MatmulImplType::AVX2:
+    case LinearImplType::AVX2:
         avx2_impl(input, weight, output);
         break;
     default:
-        throw std::runtime_error("No implementation registered for selected MatmulImplType.");
+        throw std::runtime_error("No implementation registered for selected LinearImplType.");
     }
 }
 
-MatmulImplType LinearOp::resolve_impl(Tensor &input, Tensor &weight) const
+LinearImplType LinearOp::resolve_impl(Tensor &input, Tensor &weight) const
 {
     const LinearDims dims = compute_linear_dims(input, weight);
+    (void)dims;
 
-    switch (impl_type_)
+    switch (backend_)
     {
-    case MatmulImplType::NAIVE:
-    case MatmulImplType::AVX2:
-        return impl_type_;
+    case OpBackend::NAIVE:
+        return LinearImplType::NAIVE;
+    case OpBackend::AVX2:
+        // TODO: select specialized kernels within the AVX2 backend based on dims.
+        return LinearImplType::AVX2;
     default:
-        return MatmulImplType::NAIVE;
+        return LinearImplType::NAIVE;
     }
 }
 

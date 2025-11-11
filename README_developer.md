@@ -24,6 +24,7 @@
     3. Organise cpu ops properly. maybe namespaces based on type of impl : naive / avx2 or more might come. +
     4. Read about scaling factor for rotary embedding, used for long context. 
     5. softmax at the end of qwen3 model. is it required ?
+    6. Document every component ops, tensor, ...
 
 ### Performance : 
     1. Use MatMul instead of Linear. lat diff ~1.5x

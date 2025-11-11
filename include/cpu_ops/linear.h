@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cpu_ops/base_op.h>
 #include <immintrin.h>
 #include <omp.h>
 #include <cstdio>
@@ -10,22 +11,22 @@ class Tensor;
 void linear_naive(const float *input, const float *weight, int M, int K, int N, float *output);
 void linear_avx2_omp(const float *input, const float *weight, int M, int K, int N, float *output);
 
-enum class MatmulImplType
+enum class LinearImplType
 {
     NAIVE,
     AVX2
 };
 
-class LinearOp
+class LinearOp : public BaseOp
 {
 public:
     using ImplFunction = void (*)(Tensor &input, Tensor &weight, Tensor &output);
 
-    LinearOp(MatmulImplType impl_type = MatmulImplType::AVX2);
-    LinearOp(Tensor &&weight, MatmulImplType impl_type = MatmulImplType::AVX2);
+    LinearOp(OpBackend backend = OpBackend::AVX2);
+    LinearOp(Tensor &&weight, OpBackend backend = OpBackend::AVX2);
     ~LinearOp();
 
-    void prepare();
+    void prepare() override;
 
     void run(Tensor &input, Tensor &output);
     void run(Tensor &input, Tensor &weight, Tensor &output);
@@ -36,9 +37,8 @@ private:
     static void avx2_impl(Tensor &input, Tensor &weight, Tensor &output);
 
     void run_internal(Tensor &input, Tensor &weight, Tensor &output);
-    MatmulImplType resolve_impl(Tensor &input, Tensor &weight) const;
+    LinearImplType resolve_impl(Tensor &input, Tensor &weight) const;
 
-    MatmulImplType impl_type_ = MatmulImplType::AVX2;
     std::unique_ptr<Tensor> owned_weight_;
 
 };

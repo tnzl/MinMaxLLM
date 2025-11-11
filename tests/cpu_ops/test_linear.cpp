@@ -42,8 +42,8 @@ int main()
         Tensor output_naive(static_cast<void *>(C_linear_naive_owned), {static_cast<size_t>(M), static_cast<size_t>(N)}, DataType::F32, false, false);
         Tensor output_avx(static_cast<void *>(C_linear_avx_owned), {static_cast<size_t>(M), static_cast<size_t>(N)}, DataType::F32, false, false);
 
-        LinearOp linear_naive_owned(std::move(weight_owned_naive), MatmulImplType::NAIVE);
-        LinearOp linear_avx_owned(std::move(weight_owned_avx), MatmulImplType::AVX2);
+        LinearOp linear_naive_owned(std::move(weight_owned_naive), OpBackend::NAIVE);
+        LinearOp linear_avx_owned(std::move(weight_owned_avx), OpBackend::AVX2);
 
         linear_naive_owned.prepare();
         linear_avx_owned.prepare();
@@ -71,8 +71,8 @@ int main()
         Tensor output_naive(static_cast<void *>(C_linear_naive_runtime), {static_cast<size_t>(M), static_cast<size_t>(N)}, DataType::F32, false, false);
         Tensor output_avx(static_cast<void *>(C_linear_avx_runtime), {static_cast<size_t>(M), static_cast<size_t>(N)}, DataType::F32, false, false);
 
-        LinearOp linear_naive_runtime(MatmulImplType::NAIVE);
-        LinearOp linear_avx_runtime(MatmulImplType::AVX2);
+        LinearOp linear_naive_runtime(OpBackend::NAIVE);
+        LinearOp linear_avx_runtime(OpBackend::AVX2);
 
         auto start = std::chrono::high_resolution_clock::now();
         linear_naive_runtime.run(input_tensor, weight_runtime, output_naive);
