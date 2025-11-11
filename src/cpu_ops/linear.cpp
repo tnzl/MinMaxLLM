@@ -172,6 +172,16 @@ LinearImplType LinearOp::resolve_impl(Tensor &input, Tensor &weight) const
         return LinearImplType::NAIVE;
     case OpBackend::AVX2:
         // TODO: select specialized kernels within the AVX2 backend based on dims.
+        /*
+        if (dims.M == 1 && dims.N == 1)
+        {
+            return LinearImplType::AVX2_1xKxN;
+        }
+        else
+        {
+            return LinearImplType::AVX2;
+        }
+        */
         return LinearImplType::AVX2;
     default:
         return LinearImplType::NAIVE;
