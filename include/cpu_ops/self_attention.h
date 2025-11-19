@@ -43,6 +43,9 @@ private:
     RMSNormOp q_norm_op;
     RMSNormOp k_norm_op;
 
+    // GQA operator
+    GQAOp gqa_op;
+
     // Instance-level buffers to avoid thread safety issues with static members
     std::vector<float> query; // Intermediate buffer for query projections
     std::vector<float> key;    // Intermediate buffer for key projections

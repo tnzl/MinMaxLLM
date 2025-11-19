@@ -2,96 +2,13 @@
 #include <vector>
 #include <random>
 #include <cmath>
+#include <cstring>
 #include <cpu_ops/gqa.h>
+#include <tensor/tensor.h>
 #include "../test_utils.cpp"
 #include <chrono>
 #include <algorithm>
-
-void naive_gqa_forward(
-    const float *query, // [A, h]
-    const float *key,   // [G, N_max, h]
-    const float *value, // [G, N_max, h]
-    float *output,      // [A, h]
-    int N,              // actual sequence length
-    int N_max,          // max sequence length
-    int G,              // number of KV groups
-    int A,              // number of attention heads
-    int h,              // head dimension
-    float scale         // scaling factor (typically 1/sqrt(h))
-)
-{
-    // Calculate how many attention heads per KV group
-    int heads_per_group = A / G;
-
-    // Temporary buffers for attention scores and weights
-    std::vector<float> attn_scores(N);
-    std::vector<float> attn_weights(N);
-
-    // Iterate over each attention head
-    for (int a = 0; a < A; a++)
-    {
-        // Determine which KV group this attention head belongs to
-        int g = a / heads_per_group;
-
-        // Pointer to current query head: [h]
-        const float *q = query + a * h;
-
-        // Pointer to KV group: [N_max, h]
-        const float *k_group = key + g * N_max * h;
-        const float *v_group = value + g * N_max * h;
-
-        // Step 1: Compute attention scores Q @ K^T
-        // scores[n] = sum_d(q[d] * k[n, d]) * scale
-        for (int n = 0; n < N; n++)
-        {
-            float score = 0.0f;
-            const float *k_n = k_group + n * h;
-
-            for (int d = 0; d < h; d++)
-            {
-                score += q[d] * k_n[d];
-            }
-            attn_scores[n] = score * scale;
-        }
-
-        // Step 2: Softmax over sequence dimension
-        // Find max for numerical stability
-        float max_score = attn_scores[0];
-        for (int n = 1; n < N; n++)
-        {
-            max_score = std::max(max_score, attn_scores[n]);
-        }
-
-        // Compute exp and sum
-        float sum_exp = 0.0f;
-        for (int n = 0; n < N; n++)
-        {
-            attn_weights[n] = std::exp(attn_scores[n] - max_score);
-            sum_exp += attn_weights[n];
-        }
-
-        // Normalize
-        for (int n = 0; n < N; n++)
-        {
-            attn_weights[n] /= sum_exp;
-        }
-
-        // Step 3: Compute weighted sum of values
-        // output[a, d] = sum_n(attn_weights[n] * v[n, d])
-        float *out = output + a * h;
-
-        for (int d = 0; d < h; d++)
-        {
-            float sum = 0.0f;
-            for (int n = 0; n < N; n++)
-            {
-                const float *v_n = v_group + n * h;
-                sum += attn_weights[n] * v_n[d];
-            }
-            out[d] = sum;
-        }
-    }
-}
+#include <iomanip>
 
 int main()
 {
@@ -103,12 +20,12 @@ int main()
     const int max_seq_len = 1048;
     float scale = 1.0f / std::sqrt(static_cast<float>(head_dim));
 
+    // Allocate input data
     std::vector<float> query(num_heads * head_dim);
     std::vector<float> key(kv_num_heads * max_seq_len * head_dim);
     std::vector<float> value(kv_num_heads * max_seq_len * head_dim);
-    std::vector<float> output_ref(num_heads * head_dim);
-    std::vector<float> output(num_heads * head_dim);
 
+    // Initialize with random data
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
@@ -119,24 +36,138 @@ int main()
     for (auto &x : value)
         x = dist(gen);
 
-    // Naive reference timing
+    // Output buffers for each test
+    std::vector<float> output_naive_func(num_heads * head_dim);
+    std::vector<float> output_naive_op(num_heads * head_dim);
+    std::vector<float> output_avx2_func(num_heads * head_dim);
+    std::vector<float> output_avx2_op(num_heads * head_dim);
+
+    std::cout << "=== GQA Test Suite ===\n";
+    std::cout << "Configuration: A=" << num_heads << ", G=" << kv_num_heads 
+              << ", h=" << head_dim << ", N=" << seq_len << ", N_max=" << max_seq_len 
+              << ", scale=" << scale << "\n\n";
+
+    // ============================================================================
+    // Test 1: Naive function (golden reference)
+    // ============================================================================
+    std::cout << "Test 1: Naive Function (Golden Reference)\n";
+    std::cout << "----------------------------------------\n";
+    
     auto start = std::chrono::high_resolution_clock::now();
-    naive_gqa_forward(query.data(), key.data(), value.data(), output_ref.data(), seq_len, max_seq_len, kv_num_heads, num_heads, head_dim, scale);
+    gqa_naive(
+        query.data(), 
+        key.data(), 
+        value.data(), 
+        output_naive_func.data(), 
+        seq_len, 
+        max_seq_len, 
+        kv_num_heads, 
+        num_heads, 
+        head_dim, 
+        scale
+    );
     auto end = std::chrono::high_resolution_clock::now();
-    auto naive_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    auto naive_func_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    
+    std::cout << "Latency: " << naive_func_time << " us\n";
+    std::cout << "Status: PASSED (golden reference)\n\n";
 
-    // Optimized GQA timing
+    // ============================================================================
+    // Test 2: Naive Op Class
+    // ============================================================================
+    std::cout << "Test 2: Naive Op Class\n";
+    std::cout << "----------------------------------------\n";
+    
+    // Create tensors
+    Tensor query_tensor(DataType::F32, {static_cast<size_t>(num_heads), static_cast<size_t>(head_dim)});
+    Tensor key_tensor(DataType::F32, {static_cast<size_t>(kv_num_heads), static_cast<size_t>(max_seq_len), static_cast<size_t>(head_dim)});
+    Tensor value_tensor(DataType::F32, {static_cast<size_t>(kv_num_heads), static_cast<size_t>(max_seq_len), static_cast<size_t>(head_dim)});
+    Tensor output_tensor(DataType::F32, {static_cast<size_t>(num_heads), static_cast<size_t>(head_dim)});
+    
+    // Copy data to tensors
+    std::memcpy(query_tensor.data<float>(), query.data(), query.size() * sizeof(float));
+    std::memcpy(key_tensor.data<float>(), key.data(), key.size() * sizeof(float));
+    std::memcpy(value_tensor.data<float>(), value.data(), value.size() * sizeof(float));
+    
+    // Create and run naive op
+    GQAOp naive_op(OpBackend::NAIVE, scale);
+    naive_op.prepare();
+    
     start = std::chrono::high_resolution_clock::now();
-    optimized_gqa_forward(query.data(), key.data(), value.data(), output.data(), num_heads, kv_num_heads, head_dim, seq_len, max_seq_len, scale);
+    naive_op.run(query_tensor, key_tensor, value_tensor, output_tensor, seq_len);
     end = std::chrono::high_resolution_clock::now();
-    auto avx_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    auto naive_op_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    
+    // Copy output back
+    std::memcpy(output_naive_op.data(), output_tensor.data<float>(), output_naive_op.size() * sizeof(float));
+    
+    std::cout << "Latency: " << naive_op_time << " us\n";
+    printErrorAnalysis(output_naive_func.data(), output_naive_op.data(), num_heads, head_dim, "Naive Op vs Naive Function");
+    std::cout << "\n";
 
-    // // Validate
-    // bool pass = validateResults(output.data(), output_ref.data(), num_heads, head_dim, 0.001);
-    // Always print error analysis
-    printErrorAnalysis(output.data(), output_ref.data(), num_heads, head_dim);
-    std::cout << "Naive GQA Latency: " << naive_time << " us\n";
-    std::cout << "AVX GQA Latency: " << avx_time << " us\n";
-    std::cout << "Speedup: " << (float)naive_time / (float)avx_time << "x\n";
+    // ============================================================================
+    // Test 3: AVX2 Function
+    // ============================================================================
+    std::cout << "Test 3: AVX2 Function\n";
+    std::cout << "----------------------------------------\n";
+    
+    start = std::chrono::high_resolution_clock::now();
+    optimized_gqa_forward(
+        query.data(), 
+        key.data(), 
+        value.data(), 
+        output_avx2_func.data(), 
+        num_heads, 
+        kv_num_heads, 
+        head_dim, 
+        seq_len, 
+        max_seq_len, 
+        scale
+    );
+    end = std::chrono::high_resolution_clock::now();
+    auto avx2_func_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    
+    std::cout << "Latency: " << avx2_func_time << " us\n";
+    printErrorAnalysis(output_naive_func.data(), output_avx2_func.data(), num_heads, head_dim, "AVX2 Function vs Naive Function");
+    std::cout << "\n";
+
+    // ============================================================================
+    // Test 4: AVX2 Op Class
+    // ============================================================================
+    std::cout << "Test 4: AVX2 Op Class\n";
+    std::cout << "----------------------------------------\n";
+    
+    // Reuse tensors (data already copied)
+    Tensor output_tensor_avx2(DataType::F32, {static_cast<size_t>(num_heads), static_cast<size_t>(head_dim)});
+    
+    // Create and run AVX2 op
+    GQAOp avx2_op(OpBackend::AVX2, scale);
+    avx2_op.prepare();
+    
+    start = std::chrono::high_resolution_clock::now();
+    avx2_op.run(query_tensor, key_tensor, value_tensor, output_tensor_avx2, seq_len);
+    end = std::chrono::high_resolution_clock::now();
+    auto avx2_op_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    
+    // Copy output back
+    std::memcpy(output_avx2_op.data(), output_tensor_avx2.data<float>(), output_avx2_op.size() * sizeof(float));
+    
+    std::cout << "Latency: " << avx2_op_time << " us\n";
+    printErrorAnalysis(output_naive_func.data(), output_avx2_op.data(), num_heads, head_dim, "AVX2 Op vs Naive Function");
+    std::cout << "\n";
+
+    // ============================================================================
+    // Summary
+    // ============================================================================
+    std::cout << "=== Performance Summary ===\n";
+    std::cout << std::fixed << std::setprecision(2);
+    std::cout << "1. Naive Function:     " << std::setw(8) << naive_func_time << " us (baseline)\n";
+    std::cout << "2. Naive Op Class:     " << std::setw(8) << naive_op_time << " us (speedup: " 
+              << (float)naive_func_time / naive_op_time << "x)\n";
+    std::cout << "3. AVX2 Function:      " << std::setw(8) << avx2_func_time << " us (speedup: " 
+              << (float)naive_func_time / avx2_func_time << "x)\n";
+    std::cout << "4. AVX2 Op Class:      " << std::setw(8) << avx2_op_time << " us (speedup: " 
+              << (float)naive_func_time / avx2_op_time << "x)\n";
+    
     return 0;
 }

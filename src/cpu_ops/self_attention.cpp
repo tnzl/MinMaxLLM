@@ -1,4 +1,6 @@
 #include <cpu_ops/self_attention.h>
+#include <cmath>
+
 SelfAttention::SelfAttention(
     Tensor &_q_proj_wt,
     Tensor &_k_proj_wt,
@@ -11,7 +13,13 @@ SelfAttention::SelfAttention(
     size_t _layer_idx,
     KVCache *_kvcache)
     : q_norm_op(OpBackend::AVX2, 1e-6f),
-      k_norm_op(OpBackend::AVX2, 1e-6f)
+      k_norm_op(OpBackend::AVX2, 1e-6f),
+      gqa_op(_kvcache, _layer_idx, 
+             _q_proj_wt.shape()[0] / _k_norm_wt.shape()[0],  // num_heads
+             _k_proj_wt.shape()[0] / _k_norm_wt.shape()[0],  // num_groups
+             _k_norm_wt.shape()[0],                           // head_dim
+             OpBackend::AVX2,
+             1.0f / std::sqrt(static_cast<float>(_k_norm_wt.shape()[0])))  // scale
 {
     q_proj_wt = std::move(_q_proj_wt);
     k_proj_wt = std::move(_k_proj_wt);
@@ -28,7 +36,7 @@ SelfAttention::SelfAttention(
     layer_idx = _layer_idx;
     kvcache = _kvcache;
 
-    rope = new RotaryEmbeddingAVX2(sin_cache.data<float>(), cos_cache.data<float>(), sin_cache.shape()[0], head_dim);
+    rope = new RotaryEmbeddingAVX2(sin_cache.data<float>(), cos_cache.data<float>(), static_cast<int>(sin_cache.shape()[0]), static_cast<int>(head_dim));
 
     scale = 1.0f / std::sqrt(static_cast<float>(head_dim));
 }
@@ -58,6 +66,7 @@ void SelfAttention::prepare()
 
     q_norm_op.prepare();
     k_norm_op.prepare();
+    gqa_op.prepare();
 }
 
 void SelfAttention::run(Tensor &input, size_t token_idx, Tensor &output)
@@ -80,17 +89,13 @@ void SelfAttention::run(Tensor &input, size_t token_idx, Tensor &output)
     kvcache->set_current_key(layer_idx, key.data());
     kvcache->set_current_value(layer_idx, value.data());
 
-    optimized_gqa_forward(
-        query.data(),
-        kvcache->get_key_memory_ptr(layer_idx),   // Key memory: [G, N_max, h] layout
-        kvcache->get_value_memory_ptr(layer_idx), // Value memory: [G, N_max, h] layout
-        query.data(),
-        num_heads,
-        num_groups,
-        head_dim,
-        token_idx + 1,  // Current sequence length (including current token)
-        kvcache->get_max_sequence_length(),
-        scale);
+    // Create tensors for GQA operation (query and output point to same buffer for in-place operation)
+    Tensor query_tensor_gqa(static_cast<void *>(query.data()), {num_heads, head_dim}, DataType::F32, false, false);
+    Tensor output_tensor_gqa(static_cast<void *>(query.data()), {num_heads, head_dim}, DataType::F32, false, false);
+
+    // Run GQA using the op class with KV cache
+    gqa_op.run(query_tensor_gqa, output_tensor_gqa, 
+               static_cast<int>(token_idx + 1));  // Current sequence length (including current token)
 
     linear_avx2_omp(query.data(), o_proj_wt.data<float>(), 1, num_heads * head_dim, embed_dim, output.data<float>());
 }
