@@ -1,5 +1,5 @@
-#include "cpu_ops/exp_avx2.h"
-#include "cpu_ops/silu_avx2.h"
+#include "ops/exp_avx2.h"
+#include "ops/silu_avx2.h"
 #include <immintrin.h>
 #include <cmath>
 

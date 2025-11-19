@@ -1,4 +1,4 @@
-#include <cpu_ops/elemwise_mul.h>
+#include <ops/elemwise_mul.h>
 #include <immintrin.h>
 
 void elemwise_mul_avx2(const float* a, const float* b, float* out, int batch_size, int hidden_size) {

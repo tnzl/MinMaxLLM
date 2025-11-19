@@ -1,4 +1,4 @@
-#include <cpu_ops/self_attention.h>
+#include <ops/self_attention.h>
 #include <cmath>
 
 SelfAttention::SelfAttention(

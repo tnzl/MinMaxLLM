@@ -1,5 +1,5 @@
 #include <chrono>
-#include <cpu_ops/elemwise_add.h>
+#include <ops/elemwise_add.h>
 #include <iostream>
 #include <random>
 #include <vector>

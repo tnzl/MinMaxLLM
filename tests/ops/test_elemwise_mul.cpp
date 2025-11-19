@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <random>
-#include <cpu_ops/elemwise_mul.h>
+#include <ops/elemwise_mul.h>
 #include "../test_utils.cpp"
 #include <chrono>
 

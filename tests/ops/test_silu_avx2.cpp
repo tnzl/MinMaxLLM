@@ -1,4 +1,4 @@
-#include "cpu_ops/silu_avx2.h"
+#include "ops/silu_avx2.h"
 #include <cassert>
 #include <cmath>
 #include <vector>

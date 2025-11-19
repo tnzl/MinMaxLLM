@@ -3,7 +3,7 @@
 #include <cmath>
 #include <random>
 #include <malloc.h>
-#include <cpu_ops/matmul.h>
+#include <ops/matmul.h>
 #include "../test_utils.cpp"
 
 #ifdef _WIN32

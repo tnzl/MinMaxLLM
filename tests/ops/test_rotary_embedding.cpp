@@ -1,4 +1,4 @@
-#include <cpu_ops/rotary_embedding.h>
+#include <ops/rotary_embedding.h>
 #include <iostream>
 #include <chrono>
 #include <random>

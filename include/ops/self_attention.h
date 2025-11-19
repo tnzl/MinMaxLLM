@@ -2,11 +2,11 @@
 
 #include <tensor/tensor.h>
 #include <tensor/kvcache.h>
-#include <cpu_ops/matmul.h>
-#include <cpu_ops/rotary_embedding.h>
-#include <cpu_ops/gqa.h>
-#include <cpu_ops/linear.h>
-#include <cpu_ops/rmsnorm.h>
+#include <ops/matmul.h>
+#include <ops/rotary_embedding.h>
+#include <ops/gqa.h>
+#include <ops/linear.h>
+#include <ops/rmsnorm.h>
 #include <vector>
 
 /*

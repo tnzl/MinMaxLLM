@@ -1,7 +1,7 @@
 #include <tensor/safetensors.h>
-#include <cpu_ops/linear.h>
-#include <cpu_ops/silu_avx2.h>
-#include <cpu_ops/elemwise_mul.h>
+#include <ops/linear.h>
+#include <ops/silu_avx2.h>
+#include <ops/elemwise_mul.h>
 #include <chrono>
 #include <iostream>
 #include <fstream>

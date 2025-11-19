@@ -1,4 +1,4 @@
-#include <cpu_ops/linear.h>
+#include <ops/linear.h>
 #include <tensor/tensor.h>
 
 #include <cassert>

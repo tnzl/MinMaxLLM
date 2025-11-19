@@ -1,5 +1,5 @@
-#include <cpu_ops/matmul.h>
-#include <cpu_ops/linear.h>
+#include <ops/matmul.h>
+#include <ops/linear.h>
 #include <iostream>
 #include <fstream>
 #include <sstream>

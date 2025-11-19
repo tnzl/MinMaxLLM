@@ -1,4 +1,4 @@
-#include <cpu_ops/rotary_embedding.h>
+#include <ops/rotary_embedding.h>
 #include <immintrin.h> // AVX2 intrinsics
 #include <cmath>
 #include <cstring>

@@ -1,10 +1,10 @@
 #include <models/qwen3model.h>
 
-#include <cpu_ops/decoder.h>
-#include <cpu_ops/linear.h>
-#include <cpu_ops/rmsnorm.h>
-#include <cpu_ops/rotary_embedding.h>
-#include <cpu_ops/softmax_avx2.h>
+#include <ops/decoder.h>
+#include <ops/linear.h>
+#include <ops/rmsnorm.h>
+#include <ops/rotary_embedding.h>
+#include <ops/softmax_avx2.h>
 #include <tensor/kvcache.h>
 #include <tensor/safetensors.h>
 

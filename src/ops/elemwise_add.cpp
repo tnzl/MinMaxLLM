@@ -1,4 +1,4 @@
-#include <cpu_ops/elemwise_add.h>
+#include <ops/elemwise_add.h>
 #include <immintrin.h>
 #include <omp.h>
 

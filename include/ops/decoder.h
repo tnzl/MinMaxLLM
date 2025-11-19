@@ -3,12 +3,12 @@
 #include <cstddef>
 #include <tensor/tensor.h>
 #include <tensor/kvcache.h>
-#include <cpu_ops/self_attention.h>
-#include <cpu_ops/linear.h>
-#include <cpu_ops/rmsnorm.h>
-#include <cpu_ops/elemwise_add.h>
-#include <cpu_ops/silu_avx2.h>
-#include <cpu_ops/elemwise_mul.h>
+#include <ops/self_attention.h>
+#include <ops/linear.h>
+#include <ops/rmsnorm.h>
+#include <ops/elemwise_add.h>
+#include <ops/silu_avx2.h>
+#include <ops/elemwise_mul.h>
 #include <vector>
 
 // TODO : Create a separate MLP kernel and class

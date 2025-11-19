@@ -1,5 +1,5 @@
-#include <cpu_ops/exp_avx2.h>
-#include <cpu_ops/softmax_avx2.h>
+#include <ops/exp_avx2.h>
+#include <ops/softmax_avx2.h>
 #include <algorithm>
 #include <cmath>
 

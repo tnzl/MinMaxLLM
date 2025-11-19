@@ -1,4 +1,4 @@
-#include <cpu_ops/rmsnorm.h>
+#include <ops/rmsnorm.h>
 #include <tensor/tensor.h>
 
 #include <cassert>

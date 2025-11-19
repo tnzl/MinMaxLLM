@@ -1,4 +1,4 @@
-#include "cpu_ops/softmax_avx2.h"
+#include "ops/softmax_avx2.h"
 #include <cassert>
 #include <cmath>
 #include <vector>

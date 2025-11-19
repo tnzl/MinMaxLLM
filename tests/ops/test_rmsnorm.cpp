@@ -1,7 +1,7 @@
 #include <iostream>
 #include <random>
 #include <chrono>
-#include <cpu_ops/rmsnorm.h>
+#include <ops/rmsnorm.h>
 #include <tensor/tensor.h>
 #include "../test_utils.cpp"
 #include <malloc.h>

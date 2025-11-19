@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cpu_ops/base_op.h>
+#include <ops/base_op.h>
 #include <memory>
 
 class Tensor;

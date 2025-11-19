@@ -1,5 +1,5 @@
-#include <cpu_ops/gqa.h>
-#include <cpu_ops/softmax_avx2.h>
+#include <ops/gqa.h>
+#include <ops/softmax_avx2.h>
 #include <tensor/tensor.h>
 #include <tensor/kvcache.h>
 

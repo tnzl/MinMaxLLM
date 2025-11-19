@@ -3,7 +3,7 @@
 #include <random>
 #include <cmath>
 #include <cstring>
-#include <cpu_ops/gqa.h>
+#include <ops/gqa.h>
 #include <tensor/tensor.h>
 #include "../test_utils.cpp"
 #include <chrono>

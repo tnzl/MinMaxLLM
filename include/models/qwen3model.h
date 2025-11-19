@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "../tensor/tensor.h"
-#include "../cpu_ops/rmsnorm.h"
+#include "../ops/rmsnorm.h"
 
 class Safetensor;
 class KVCache;

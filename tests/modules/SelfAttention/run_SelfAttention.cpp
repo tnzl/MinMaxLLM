@@ -12,11 +12,11 @@
 #include <optional>
 #include <iomanip>
 
-#include <cpu_ops/self_attention.h>
+#include <ops/self_attention.h>
 #include <tensor/safetensors.h>
 #include <tensor/kvcache.h>
 #include <tensor/tensor.h>
-#include <cpu_ops/rotary_embedding.h>
+#include <ops/rotary_embedding.h>
 
 #include "../../test_utils.cpp"
 

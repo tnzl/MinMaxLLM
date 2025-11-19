@@ -12,9 +12,9 @@
 #include <string>
 #include <vector>
 
-#include <cpu_ops/decoder.h>
-#include <cpu_ops/rotary_embedding.h>
-#include <cpu_ops/self_attention.h>
+#include <ops/decoder.h>
+#include <ops/rotary_embedding.h>
+#include <ops/self_attention.h>
 #include <tensor/kvcache.h>
 #include <tensor/safetensors.h>
 #include <tensor/tensor.h>

@@ -22,10 +22,10 @@ else()
     message(STATUS "Building without AVX2 optimizations")
 endif()
 
-# Add subdirectories for tensor, cpu_ops, and tests
+# Add subdirectories for tensor, ops, and tests
 add_subdirectory(src/tensor)
-add_subdirectory(src/cpu_ops)
+add_subdirectory(src/ops)
 add_subdirectory(src/models)
-add_subdirectory(tests/cpu_ops)
+add_subdirectory(tests/ops)
 add_subdirectory(tests/modules)
 add_subdirectory(tests/tensor)
