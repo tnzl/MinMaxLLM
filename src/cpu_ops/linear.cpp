@@ -50,11 +50,6 @@ void ensure_output_shape(Tensor &output, int M, int N)
     assert(output_shape.size() == 2 && output_shape[0] == static_cast<size_t>(M) && output_shape[1] == static_cast<size_t>(N) && "LinearOp output tensor shape mismatch.");
 }
 
-
-void validate_dtype(Tensor &tensor)
-{
-    assert(tensor.dtype() == DataType::F32 && "LinearOp currently supports only float32 tensors.");
-}
 } // namespace
 
 // Naive reference version
@@ -190,9 +185,10 @@ LinearImplType LinearOp::resolve_impl(Tensor &input, Tensor &weight) const
 
 void LinearOp::naive_impl(Tensor &input, Tensor &weight, Tensor &output)
 {
-    validate_dtype(input);
-    validate_dtype(weight);
-    validate_dtype(output);
+    // check if all dtypes are F32
+    assert(input.dtype() == DataType::F32 &&  "LinearOp::naive_impl supports only float32 input tensors.");
+    assert(weight.dtype() == DataType::F32 && "LinearOp::naive_impl supports only float32 weight tensors.");
+    assert(output.dtype() == DataType::F32 && "LinearOp::naive_impl supports only float32 output tensors.");
 
     const LinearDims dims = compute_linear_dims(input, weight);
     linear_naive(input.data<float>(), weight.data<float>(), dims.M, dims.K, dims.N, output.data<float>());
@@ -200,9 +196,10 @@ void LinearOp::naive_impl(Tensor &input, Tensor &weight, Tensor &output)
 
 void LinearOp::avx2_impl(Tensor &input, Tensor &weight, Tensor &output)
 {
-    validate_dtype(input);
-    validate_dtype(weight);
-    validate_dtype(output);
+    // check if all dtypes are F32
+    assert(input.dtype() == DataType::F32 && "LinearOp::avx2_impl supports only float32 input tensors.");
+    assert(weight.dtype() == DataType::F32 && "LinearOp::avx2_impl supports only float32 weight tensors.");
+    assert(output.dtype() == DataType::F32 && "LinearOp::avx2_impl supports only float32 output tensors.");
 
     const LinearDims dims = compute_linear_dims(input, weight);
     linear_avx2_omp(input.data<float>(), weight.data<float>(), dims.M, dims.K, dims.N, output.data<float>());

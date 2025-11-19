@@ -15,6 +15,7 @@
     5. sampling strategies, maube implement topk type ops.
     6. Enable tensor.to(device); // device can be ram gpu etc
     7. Feature : Build your LLM. Make the components super configurable. for example : decoder bloc can be configured with the type of rope, attn block, mlp etc. this requires reading more llm arch classes in transformers. Aim is to cover all architectures just from config. 
+    8. Move to ninja instead of VS. Use VS Code for debug. Create a starter's guide for this.
 
 ### Cleanups :
     1. Correct the name formatting in matmul avx. Should be M K N.
@@ -25,9 +26,11 @@
     4. Read about scaling factor for rotary embedding, used for long context. 
     5. softmax at the end of qwen3 model. is it required ?
     6. Document every component ops, tensor, ...
+    7. Find solution for intermediate tensors 
 
 ### Performance : 
     1. Use MatMul instead of Linear. lat diff ~1.5x
     2. MLP block can optimised by doing MM gate, MM up and Silu at the same time.
     3. write an mlp kernel directly instead. assert input numel() == embed_dim == output_dim
     4. properly manage the prepare() calls in qwen3
+    5. memory optimisation

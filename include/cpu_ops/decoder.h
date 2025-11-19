@@ -10,6 +10,7 @@
 #include <cpu_ops/silu_avx2.h>
 #include <cpu_ops/elemwise_mul.h>
 #include <vector>
+#include <memory>
 
 // TODO : Create a separate MLP kernel and class
 
@@ -25,10 +26,13 @@ private:
     // post attention norm weights
     Tensor post_attn_norm_wt;
 
-    // MLP weights
-    Tensor mlp_up_proj_wt;
-    Tensor mlp_gate_proj_wt;
-    Tensor mlp_down_proj_wt;
+    // MLP linear ops
+    std::unique_ptr<LinearOp> mlp_up_proj;
+    std::unique_ptr<LinearOp> mlp_gate_proj;
+    std::unique_ptr<LinearOp> mlp_down_proj;
+
+    size_t mlp_hidden_dim = 0;
+    size_t mlp_model_dim = 0;
 
     size_t layer_idx = 0;
 
