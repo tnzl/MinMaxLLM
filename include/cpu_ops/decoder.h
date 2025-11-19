@@ -17,14 +17,14 @@
 class Decoder
 {
 private:
-    // pre-Attention norm weights
-    Tensor input_norm_wt;
+    // pre-Attention norm
+    RMSNormOp input_norm_op;
 
     // Self-Attention 
     SelfAttention *self_attn;
 
-    // post attention norm weights
-    Tensor post_attn_norm_wt;
+    // post attention norm
+    RMSNormOp post_attn_norm_op;
 
     // MLP linear ops
     std::unique_ptr<LinearOp> mlp_up_proj;

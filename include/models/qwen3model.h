@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "../tensor/tensor.h"
+#include "../cpu_ops/rmsnorm.h"
 
 class Safetensor;
 class KVCache;
@@ -69,7 +70,7 @@ private:
     std::vector<std::unique_ptr<Decoder>> decoders_;
 
     Tensor embedding_weight_;
-    Tensor final_norm_weight_;
+    std::unique_ptr<RMSNormOp> final_norm_op_;
     Tensor sin_cache_;
     Tensor cos_cache_;
 

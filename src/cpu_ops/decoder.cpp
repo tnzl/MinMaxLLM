@@ -25,11 +25,11 @@ Decoder::Decoder(
     Tensor &_mlp_up_proj_wt,
     Tensor &_mlp_gate_proj_wt,
     Tensor &_mlp_down_proj_wt
-    ) : layer_idx(_layer_idx)
+    ) : layer_idx(_layer_idx),
+        input_norm_op(std::move(_input_norm_wt), OpBackend::AVX2, 1e-6f),
+        post_attn_norm_op(std::move(_post_attn_norm_wt), OpBackend::AVX2, 1e-6f)
     {
         self_attn = new SelfAttention(_q_proj_wt, _k_proj_wt, _v_proj_wt, _o_proj_wt, _q_norm_wt, _k_norm_wt, sin_cache, cos_cache, _layer_idx, _kvcache);
-        input_norm_wt = std::move(_input_norm_wt);
-        post_attn_norm_wt = std::move(_post_attn_norm_wt);
         mlp_hidden_dim = _mlp_up_proj_wt.shape()[0];
         mlp_model_dim = _mlp_down_proj_wt.shape()[0];
 
@@ -46,11 +46,11 @@ Decoder::~Decoder(){
 }
 
 void Decoder::prepare(){
-    input_norm_wt.prefetch_async();
+    input_norm_op.prepare();
     
     self_attn->prepare();
     
-    post_attn_norm_wt.prefetch_async();
+    post_attn_norm_op.prepare();
 
     if (mlp_gate_proj)
     {
@@ -78,7 +78,7 @@ void Decoder::run(Tensor &input, size_t token_idx, Tensor &output){
     Tensor intermediate2(DataType::F32, {model_dim});
 
     // pre attention norm
-    rmsnorm_avx2(input.data<float>(), input_norm_wt.data<float>(), intermediate1.data<float>(), 1, model_dim, 0.000001);
+    input_norm_op.run(input, intermediate1);
 
     // self attention
     self_attn->run(intermediate1, token_idx, intermediate2);
@@ -87,7 +87,7 @@ void Decoder::run(Tensor &input, size_t token_idx, Tensor &output){
     elemwise_add_avx2_omp(input.data<float>(), intermediate2.data<float>(), intermediate1.data<float>(), 1, model_dim);
 
     // post attention norm
-    rmsnorm_avx2(intermediate1.data<float>(), post_attn_norm_wt.data<float>(), intermediate2.data<float>(), 1, model_dim, 0.000001);
+    post_attn_norm_op.run(intermediate1, intermediate2);
 
     // mlp
     Tensor intermediate3(DataType::F32, {mlp_hidden_dim});

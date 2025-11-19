@@ -1,6 +1,4 @@
 #include <cpu_ops/self_attention.h>
-
-#include <iostream>
 SelfAttention::SelfAttention(
     Tensor &_q_proj_wt,
     Tensor &_k_proj_wt,
@@ -12,6 +10,8 @@ SelfAttention::SelfAttention(
     Tensor &cos_cache,
     size_t _layer_idx,
     KVCache *_kvcache)
+    : q_norm_op(OpBackend::AVX2, 1e-6f),
+      k_norm_op(OpBackend::AVX2, 1e-6f)
 {
     q_proj_wt = std::move(_q_proj_wt);
     k_proj_wt = std::move(_k_proj_wt);
@@ -55,6 +55,9 @@ void SelfAttention::prepare()
     o_proj_wt.prefetch_async();
     q_norm_wt.prefetch_async();
     k_norm_wt.prefetch_async();
+
+    q_norm_op.prepare();
+    k_norm_op.prepare();
 }
 
 void SelfAttention::run(Tensor &input, size_t token_idx, Tensor &output)
@@ -63,8 +66,13 @@ void SelfAttention::run(Tensor &input, size_t token_idx, Tensor &output)
     linear_avx2_omp(input.data<float>(), k_proj_wt.data<float>(), 1, embed_dim, num_groups * head_dim, key.data());
     linear_avx2_omp(input.data<float>(), v_proj_wt.data<float>(), 1, embed_dim, num_groups * head_dim, value.data());
 
-    rmsnorm_avx2(query.data(), q_norm_wt.data<float>(), query.data(), num_heads, head_dim, 0.000001);
-    rmsnorm_avx2(key.data(), k_norm_wt.data<float>(), key.data(), num_groups, head_dim, 0.000001);
+    // Create temporary tensors for query and key normalization
+    Tensor query_tensor(static_cast<void *>(query.data()), {num_heads, head_dim}, DataType::F32, false, false);
+    Tensor key_tensor(static_cast<void *>(key.data()), {num_groups, head_dim}, DataType::F32, false, false);
+
+    // Apply RMSNorm using the op class
+    q_norm_op.run(query_tensor, q_norm_wt, query_tensor);
+    k_norm_op.run(key_tensor, k_norm_wt, key_tensor);
 
     rope->rotate(query.data(), num_heads, head_dim, token_idx);
     rope->rotate(key.data(), num_groups, head_dim, token_idx);

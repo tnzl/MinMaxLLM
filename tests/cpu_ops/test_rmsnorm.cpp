@@ -1,32 +1,10 @@
 #include <iostream>
-#include <vector>
 #include <random>
-#include <cmath>
-#include <cpu_ops/rmsnorm.h>
-#include "../test_utils.cpp"
 #include <chrono>
-
-// Naive RMSNorm implementation for validation
-std::vector<float> naive_rmsnorm_forward(const float *input, const float *weight, int batch_size, int hidden_size, float eps)
-{
-    std::vector<float> output(batch_size * hidden_size);
-    for (int b = 0; b < batch_size; ++b)
-    {
-        const float *in = input + b * hidden_size;
-        float mean_sq = 0.0f;
-        for (int d = 0; d < hidden_size; ++d)
-        {
-            mean_sq += in[d] * in[d];
-        }
-        mean_sq /= hidden_size;
-        float denom = 1.0f / std::sqrt(mean_sq + eps);
-        for (int d = 0; d < hidden_size; ++d)
-        {
-            output[b * hidden_size + d] = weight[d] * in[d] * denom;
-        }
-    }
-    return output;
-}
+#include <cpu_ops/rmsnorm.h>
+#include <tensor/tensor.h>
+#include "../test_utils.cpp"
+#include <malloc.h>
 
 int main()
 {
@@ -34,84 +12,161 @@ int main()
     const int hidden_size = 32;
     float eps = 1e-6f;
 
-    std::vector<float> input(batch_size * hidden_size);
-    std::vector<float> weight(hidden_size, 1.0f);
+    // Allocate aligned memory
+    float *input_data = static_cast<float *>(_aligned_malloc(batch_size * hidden_size * sizeof(float), 32));
+    float *weight_data = static_cast<float *>(_aligned_malloc(hidden_size * sizeof(float), 32));
+    float *output_golden = static_cast<float *>(_aligned_malloc(batch_size * hidden_size * sizeof(float), 32));
+    float *output_naive_op = static_cast<float *>(_aligned_malloc(batch_size * hidden_size * sizeof(float), 32));
+    float *output_avx2_func = static_cast<float *>(_aligned_malloc(batch_size * hidden_size * sizeof(float), 32));
+    float *output_avx2_op = static_cast<float *>(_aligned_malloc(batch_size * hidden_size * sizeof(float), 32));
 
+    // Initialize with random values
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
-    for (auto &x : input)
-        x = dist(gen);
-    for (auto &x : weight)
-        x = dist(gen);
 
-    // More accurate timing: nanoseconds and multiple iterations
+    for (int i = 0; i < batch_size * hidden_size; ++i)
+        input_data[i] = dist(gen);
+    for (int i = 0; i < hidden_size; ++i)
+        weight_data[i] = dist(gen);
+
     constexpr int num_iters = 10000;
 
-    // Naive reference timing
+    std::cout << "=== RMSNorm Test Suite ===\n";
+    std::cout << "Batch size: " << batch_size << ", Hidden size: " << hidden_size << ", Epsilon: " << eps << "\n";
+    std::cout << "Iterations per test: " << num_iters << "\n\n";
+
+    // ===== Test 1: Naive function (golden output and latency baseline) =====
+    std::cout << "=== Test 1: Naive Function (Golden Output & Baseline) ===\n";
     auto start = std::chrono::high_resolution_clock::now();
-    std::vector<float> ref;
     for (int i = 0; i < num_iters; ++i)
     {
-        ref = naive_rmsnorm_forward(input.data(), weight.data(), batch_size, hidden_size, eps);
+        rmsnorm_naive(input_data, weight_data, output_golden, batch_size, hidden_size, eps);
     }
     auto end = std::chrono::high_resolution_clock::now();
-    auto naive_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-    double naive_time_avg_ns = (double)naive_time_ns / num_iters;
+    auto naive_func_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+    double naive_func_time_avg_ns = static_cast<double>(naive_func_time_ns) / num_iters;
+    std::cout << "Naive function avg latency: " << naive_func_time_avg_ns << " ns\n";
+    std::cout << "Naive function total time: " << naive_func_time_ns / 1e6 << " ms\n\n";
 
-    // ===== Test 1: Separate input/output =====
-    std::cout << "=== Test 1: Separate input/output ===\n";
-    std::vector<float> out(batch_size * hidden_size);
+    // ===== Test 2: Naive Op Class =====
+    std::cout << "=== Test 2: Naive Op Class ===\n";
+    Tensor input_tensor(static_cast<void *>(input_data), {static_cast<size_t>(batch_size), static_cast<size_t>(hidden_size)}, DataType::F32, false, false);
+    Tensor weight_tensor(static_cast<void *>(weight_data), {static_cast<size_t>(hidden_size)}, DataType::F32, false, false);
+    Tensor output_tensor_naive_op(static_cast<void *>(output_naive_op), {static_cast<size_t>(batch_size), static_cast<size_t>(hidden_size)}, DataType::F32, false, false);
+
+    RMSNormOp rmsnorm_naive_op(OpBackend::NAIVE, eps);
+    rmsnorm_naive_op.prepare();
+
     start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < num_iters; ++i)
     {
-        rmsnorm_avx2(input.data(), weight.data(), out.data(), batch_size, hidden_size, eps);
+        rmsnorm_naive_op.run(input_tensor, weight_tensor, output_tensor_naive_op);
     }
     end = std::chrono::high_resolution_clock::now();
-    auto avx_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-    double avx_time_avg_ns = (double)avx_time_ns / num_iters;
+    auto naive_op_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+    double naive_op_time_avg_ns = static_cast<double>(naive_op_time_ns) / num_iters;
+    std::cout << "Naive op class avg latency: " << naive_op_time_avg_ns << " ns\n";
+    std::cout << "Naive op class total time: " << naive_op_time_ns / 1e6 << " ms\n";
 
-    // Validate
-    bool pass = validateResults(ref.data(), out.data(), batch_size, hidden_size, 0.001);
-    printErrorAnalysis(ref.data(), out.data(), batch_size, hidden_size);
+    // Validate against golden
+    bool pass = validateResults(output_golden, output_naive_op, batch_size, hidden_size, 0.001f);
+    printErrorAnalysis(output_golden, output_naive_op, batch_size, hidden_size, "Naive Op vs Golden");
     if (!pass)
     {
-        std::cerr << "Error: RMSNorm results don't match (separate buffers)!\n";
+        std::cerr << "ERROR: Naive op class results don't match golden output!\n";
+        _aligned_free(input_data);
+        _aligned_free(weight_data);
+        _aligned_free(output_golden);
+        _aligned_free(output_naive_op);
+        _aligned_free(output_avx2_func);
+        _aligned_free(output_avx2_op);
         return 1;
     }
-    std::cout << "RMSNorm correctness test passed (separate buffers)!\n";
-    std::cout << "Naive RMSNorm Avg Latency: " << naive_time_avg_ns << " ns\n";
-    std::cout << "AVX RMSNorm Avg Latency: " << avx_time_avg_ns << " ns\n";
-    std::cout << "Speedup: " << naive_time_avg_ns / avx_time_avg_ns << "x\n\n";
+    std::cout << "✓ Naive op class correctness test PASSED\n";
+    std::cout << "Speedup (naive func vs naive op): " << naive_func_time_avg_ns / naive_op_time_avg_ns << "x\n\n";
 
-    // ===== Test 2: In-place operation (input == output) =====
-    std::cout << "=== Test 2: In-place operation (input == output) ===\n";
-    std::vector<float> inplace_data = input; // Copy for in-place test
+    // ===== Test 3: AVX2 Function =====
+    std::cout << "=== Test 3: AVX2 Function ===\n";
     start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < num_iters; ++i)
     {
-        // Reset data for each iteration to ensure consistent timing
-        if (i > 0)
-            inplace_data = input;
-        rmsnorm_avx2(inplace_data.data(), weight.data(), inplace_data.data(), batch_size, hidden_size, eps);
+        rmsnorm_avx2(input_data, weight_data, output_avx2_func, batch_size, hidden_size, eps);
     }
     end = std::chrono::high_resolution_clock::now();
-    auto inplace_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-    double inplace_time_avg_ns = (double)inplace_time_ns / num_iters;
+    auto avx2_func_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+    double avx2_func_time_avg_ns = static_cast<double>(avx2_func_time_ns) / num_iters;
+    std::cout << "AVX2 function avg latency: " << avx2_func_time_avg_ns << " ns\n";
+    std::cout << "AVX2 function total time: " << avx2_func_time_ns / 1e6 << " ms\n";
 
-    // Validate in-place result
-    pass = validateResults(ref.data(), inplace_data.data(), batch_size, hidden_size, 0.001);
-    printErrorAnalysis(ref.data(), inplace_data.data(), batch_size, hidden_size);
+    // Validate against golden
+    pass = validateResults(output_golden, output_avx2_func, batch_size, hidden_size, 0.001f);
+    printErrorAnalysis(output_golden, output_avx2_func, batch_size, hidden_size, "AVX2 Function vs Golden");
     if (!pass)
     {
-        std::cerr << "Error: RMSNorm results don't match (in-place)!\n";
+        std::cerr << "ERROR: AVX2 function results don't match golden output!\n";
+        _aligned_free(input_data);
+        _aligned_free(weight_data);
+        _aligned_free(output_golden);
+        _aligned_free(output_naive_op);
+        _aligned_free(output_avx2_func);
+        _aligned_free(output_avx2_op);
         return 1;
     }
-    std::cout << "RMSNorm correctness test passed (in-place)!\n";
-    std::cout << "In-place RMSNorm Avg Latency: " << inplace_time_avg_ns << " ns\n";
-    std::cout << "Speedup (naive vs in-place): " << naive_time_avg_ns / inplace_time_avg_ns << "x\n";
-    std::cout << "In-place vs separate buffers: " << avx_time_avg_ns / inplace_time_avg_ns << "x\n";
+    std::cout << "✓ AVX2 function correctness test PASSED\n";
+    std::cout << "Speedup (naive func vs avx2 func): " << naive_func_time_avg_ns / avx2_func_time_avg_ns << "x\n\n";
 
+    // ===== Test 4: AVX2 Op Class =====
+    std::cout << "=== Test 4: AVX2 Op Class ===\n";
+    Tensor output_tensor_avx2_op(static_cast<void *>(output_avx2_op), {static_cast<size_t>(batch_size), static_cast<size_t>(hidden_size)}, DataType::F32, false, false);
+
+    RMSNormOp rmsnorm_avx2_op(OpBackend::AVX2, eps);
+    rmsnorm_avx2_op.prepare();
+
+    start = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < num_iters; ++i)
+    {
+        rmsnorm_avx2_op.run(input_tensor, weight_tensor, output_tensor_avx2_op);
+    }
+    end = std::chrono::high_resolution_clock::now();
+    auto avx2_op_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+    double avx2_op_time_avg_ns = static_cast<double>(avx2_op_time_ns) / num_iters;
+    std::cout << "AVX2 op class avg latency: " << avx2_op_time_avg_ns << " ns\n";
+    std::cout << "AVX2 op class total time: " << avx2_op_time_ns / 1e6 << " ms\n";
+
+    // Validate against golden
+    pass = validateResults(output_golden, output_avx2_op, batch_size, hidden_size, 0.001f);
+    printErrorAnalysis(output_golden, output_avx2_op, batch_size, hidden_size, "AVX2 Op vs Golden");
+    if (!pass)
+    {
+        std::cerr << "ERROR: AVX2 op class results don't match golden output!\n";
+        _aligned_free(input_data);
+        _aligned_free(weight_data);
+        _aligned_free(output_golden);
+        _aligned_free(output_naive_op);
+        _aligned_free(output_avx2_func);
+        _aligned_free(output_avx2_op);
+        return 1;
+    }
+    std::cout << "✓ AVX2 op class correctness test PASSED\n";
+    std::cout << "Speedup (naive func vs avx2 op): " << naive_func_time_avg_ns / avx2_op_time_avg_ns << "x\n";
+    std::cout << "Speedup (avx2 func vs avx2 op): " << avx2_func_time_avg_ns / avx2_op_time_avg_ns << "x\n\n";
+
+    // ===== Summary =====
+    std::cout << "=== Summary ===\n";
+    std::cout << "1. Naive function (golden):     " << naive_func_time_avg_ns << " ns\n";
+    std::cout << "2. Naive op class:              " << naive_op_time_avg_ns << " ns (vs golden: " << naive_func_time_avg_ns / naive_op_time_avg_ns << "x)\n";
+    std::cout << "3. AVX2 function:               " << avx2_func_time_avg_ns << " ns (vs golden: " << naive_func_time_avg_ns / avx2_func_time_avg_ns << "x)\n";
+    std::cout << "4. AVX2 op class:               " << avx2_op_time_avg_ns << " ns (vs golden: " << naive_func_time_avg_ns / avx2_op_time_avg_ns << "x)\n";
     std::cout << "\n=== All tests passed! ===\n";
+
+    // Cleanup
+    _aligned_free(input_data);
+    _aligned_free(weight_data);
+    _aligned_free(output_golden);
+    _aligned_free(output_naive_op);
+    _aligned_free(output_avx2_func);
+    _aligned_free(output_avx2_op);
+
     return 0;
 }
