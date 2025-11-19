@@ -10,7 +10,6 @@
 #include <cpu_ops/silu_avx2.h>
 #include <cpu_ops/elemwise_mul.h>
 #include <vector>
-#include <memory>
 
 // TODO : Create a separate MLP kernel and class
 
@@ -26,13 +25,13 @@ private:
     // post attention norm
     RMSNormOp post_attn_norm_op;
 
-    // MLP linear ops
-    std::unique_ptr<LinearOp> mlp_up_proj;
-    std::unique_ptr<LinearOp> mlp_gate_proj;
-    std::unique_ptr<LinearOp> mlp_down_proj;
-
     size_t mlp_hidden_dim = 0;
     size_t mlp_model_dim = 0;
+
+    // MLP linear ops
+    LinearOp mlp_up_proj;
+    LinearOp mlp_gate_proj;
+    LinearOp mlp_down_proj;
 
     size_t layer_idx = 0;
 

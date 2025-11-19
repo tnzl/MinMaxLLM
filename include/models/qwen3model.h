@@ -70,7 +70,7 @@ private:
     std::vector<std::unique_ptr<Decoder>> decoders_;
 
     Tensor embedding_weight_;
-    std::unique_ptr<RMSNormOp> final_norm_op_;
+    RMSNormOp final_norm_op_;
     Tensor sin_cache_;
     Tensor cos_cache_;
 

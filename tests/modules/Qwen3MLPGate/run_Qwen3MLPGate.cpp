@@ -34,20 +34,20 @@ int main(int argc, char **argv)
     // Print statements
     // print first 10 and last 10 elements of input and weight for verification
     std::cout << "Input (first 10 elements): ";
-    for (int i = 0; i < std::min(10, N * K); ++i)
+    for (int i = 0; i < (std::min)(10, N * K); ++i)
         std::cout << input[i] << " ";
     std::cout << "\n";
     std::cout << "Input (last 10 elements): ";
-    for (int i = std::max(0, N * K - 10); i < N * K; ++i)
+    for (int i = (std::max)(0, N * K - 10); i < N * K; ++i)
         std::cout << input[i] << " ";
     std::cout << "\n";
 
     std::cout << "\nWeight (first 10 elements): ";
-    for (int i = 0; i < std::min(10, K * M); ++i)
+    for (int i = 0; i < (std::min)(10, K * M); ++i)
         std::cout << weight[i] << " ";
     std::cout << "\n";
     std::cout << "Weight (last 10 elements): ";
-    for (int i = std::max(0, K * M - 10); i < K * M; ++i)
+    for (int i = (std::max)(0, K * M - 10); i < K * M; ++i)
         std::cout << weight[i] << " ";
     std::cout << "\n";
 
@@ -72,11 +72,11 @@ int main(int argc, char **argv)
     std::cout << "Matrix multiplication completed.\n";
 
     std::cout << "Output (first 10 elements): ";
-    for (int i = 0; i < std::min(10, N * M); ++i)
+    for (int i = 0; i < (std::min)(10, N * M); ++i)
         std::cout << output[i] << " ";
     std::cout << "\n";
     std::cout << "Output (last 10 elements): ";
-    for (int i = std::max(0, N * M - 10); i < N * M; ++i)
+    for (int i = (std::max)(0, N * M - 10); i < N * M; ++i)
         std::cout << output[i] << " ";
     std::cout << "\n";
 

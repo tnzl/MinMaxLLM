@@ -4,7 +4,8 @@
 #include <immintrin.h>
 #include <omp.h>
 #include <cstdio>
-#include <memory>
+#include <optional>
+#include <tensor/tensor.h>
 
 class Tensor;
 
@@ -39,6 +40,6 @@ private:
     void run_internal(Tensor &input, Tensor &weight, Tensor &output);
     LinearImplType resolve_impl(Tensor &input, Tensor &weight) const;
 
-    std::unique_ptr<Tensor> owned_weight_;
+    std::optional<Tensor> owned_weight_;
 
 };

@@ -112,14 +112,14 @@ LinearOp::LinearOp(OpBackend backend) : BaseOp(backend)
 // callers can hand over temporaries or moved lvalues, while we still move once into owned_weight_
 LinearOp::LinearOp(Tensor &&weight, OpBackend backend) : BaseOp(backend)
 {
-    owned_weight_ = std::make_unique<Tensor>(std::move(weight));
+    owned_weight_ = std::move(weight);
 }
 
 LinearOp::~LinearOp() = default;
 
 void LinearOp::prepare()
 {
-    if (owned_weight_)
+    if (owned_weight_.has_value())
     {
         owned_weight_->prefetch_async();
     }
@@ -127,7 +127,7 @@ void LinearOp::prepare()
 
 void LinearOp::run(Tensor &input, Tensor &output)
 {
-    if (!owned_weight_)
+    if (!owned_weight_.has_value())
     {
         throw std::runtime_error("LinearOp::run called without a stored weight tensor.");
     }

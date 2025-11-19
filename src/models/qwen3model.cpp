@@ -33,6 +33,7 @@ Qwen3Model::Qwen3Model(const Qwen3Config &config)
     : config_(config),
       head_dim_(0),
       tokens_processed_(0),
+      final_norm_op_(OpBackend::AVX2, config.rms_norm_eps),
       hidden_state_(DataType::F32, {static_cast<std::size_t>(config.hidden_size)}),
       decoder_output_(DataType::F32, {static_cast<std::size_t>(config.hidden_size)}),
       norm_output_(DataType::F32, {static_cast<std::size_t>(config.hidden_size)}),
@@ -71,7 +72,8 @@ void Qwen3Model::load_weights(const std::string &safetensor_path, bool use_mmap)
 
     embedding_weight_ = wrap_tensor(*weights_, "model.embed_tokens.weight", use_mmap);
     Tensor final_norm_weight = wrap_tensor(*weights_, "model.norm.weight", use_mmap);
-    final_norm_op_ = std::make_unique<RMSNormOp>(std::move(final_norm_weight), OpBackend::AVX2, config_.rms_norm_eps);
+    final_norm_op_.~RMSNormOp();
+    new (&final_norm_op_) RMSNormOp(std::move(final_norm_weight), OpBackend::AVX2, config_.rms_norm_eps);
 
     sin_cache_ = Tensor(DataType::F32,
                         {static_cast<std::size_t>(config_.max_position_embeddings),
@@ -135,7 +137,7 @@ void Qwen3Model::load_weights(const std::string &safetensor_path, bool use_mmap)
         decoders_.push_back(std::move(decoder));
     }
 
-    final_norm_op_->prepare();
+    final_norm_op_.prepare();
 
     kv_cache_->reset();
     tokens_processed_ = 0;
@@ -252,7 +254,7 @@ void Qwen3Model::run_decoder_stack(std::size_t token_index)
 
 void Qwen3Model::apply_final_norm()
 {
-    final_norm_op_->run(hidden_state_, norm_output_);
+    final_norm_op_.run(hidden_state_, norm_output_);
 }
 
 void Qwen3Model::run_lm_head()

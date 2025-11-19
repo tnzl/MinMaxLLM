@@ -1,7 +1,8 @@
 #pragma once
 
 #include <cpu_ops/base_op.h>
-#include <memory>
+#include <optional>
+#include <tensor/tensor.h>
 
 class Tensor;
 
@@ -39,6 +40,6 @@ private:
     void run_internal(Tensor &input, Tensor &weight, Tensor &output, float eps);
     RMSNormImplType resolve_impl(Tensor &input, Tensor &weight) const;
 
-    std::unique_ptr<Tensor> owned_weight_;
+    std::optional<Tensor> owned_weight_;
     float eps_;
 };

@@ -126,14 +126,14 @@ RMSNormOp::RMSNormOp(OpBackend backend, float epsilon) : BaseOp(backend), eps_(e
 
 RMSNormOp::RMSNormOp(Tensor &&weight, OpBackend backend, float epsilon) : BaseOp(backend), eps_(epsilon)
 {
-    owned_weight_ = std::make_unique<Tensor>(std::move(weight));
+    owned_weight_ = std::move(weight);
 }
 
 RMSNormOp::~RMSNormOp() = default;
 
 void RMSNormOp::prepare()
 {
-    if (owned_weight_)
+    if (owned_weight_.has_value())
     {
         owned_weight_->prefetch_async();
     }
@@ -141,7 +141,7 @@ void RMSNormOp::prepare()
 
 void RMSNormOp::run(Tensor &input, Tensor &output)
 {
-    if (!owned_weight_)
+    if (!owned_weight_.has_value())
     {
         throw std::runtime_error("RMSNormOp::run called without a stored weight tensor.");
     }
@@ -151,7 +151,7 @@ void RMSNormOp::run(Tensor &input, Tensor &output)
 
 void RMSNormOp::run(Tensor &input, Tensor &output, float eps)
 {
-    if (!owned_weight_)
+    if (!owned_weight_.has_value())
     {
         throw std::runtime_error("RMSNormOp::run called without a stored weight tensor.");
     }
