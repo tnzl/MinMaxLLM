@@ -1,36 +1,45 @@
-## Get Started
-#### Steps to build: 
-    1. Install Visual Studio 2022 (Community Edition) or later.
-    2. run build.ps1
-    3. Run the application from build folder.
+## Getting Started
 
-## Next TODOs
+### Build Steps
+1. Install Visual Studio 2022 (Community Edition) or later
+2. Run `build.ps1`
+3. Run the application from the `build` folder
 
+## Roadmap
 
-### Features :
-    1. Add an avx optimised matmul for M=1
-    2. Op classes
-    3. pybind to run the model from py
-    4. 8 bit quantization
-    5. sampling strategies, maube implement topk type ops.
-    6. Enable tensor.to(device); // device can be ram gpu etc
-    7. Feature : Build your LLM. Make the components super configurable. for example : decoder bloc can be configured with the type of rope, attn block, mlp etc. this requires reading more llm arch classes in transformers. Aim is to cover all architectures just from config. 
-    8. Move to ninja instead of VS. Use VS Code for debug. Create a starter's guide for this.
+### Features
+1. Add AVX-optimized matmul for M=1
+2. Implement op classes architecture
+3. Add pybind11 bindings to run the model from Python
+4. Implement 8-bit quantization
+5. Add sampling strategies (e.g., implement top-k type ops)
+6. Enable `tensor.to(device)` - device can be RAM, GPU, etc.
+7. **Build Your LLM**: Make components highly configurable
+   - Decoder block can be configured with type of RoPE, attention block, MLP, etc.
+   - Requires reading more LLM architecture classes in transformers
+   - Goal: Cover all architectures from config
+8. Migrate build system from Visual Studio to Ninja
+   - Use VS Code for debugging
+   - Create a starter's guide for this setup
 
-### Cleanups :
-    1. Correct the name formatting in matmul avx. Should be M K N.
-    2. Follow standards in function parameter order : 
-        * inputs first and then outputs 
-        * ex : bool parseString(const char* input, int start_pos, int length, char* output, int* output_length);
-    3. Organise cpu ops properly. maybe namespaces based on type of impl : naive / avx2 or more might come. +
-    4. Read about scaling factor for rotary embedding, used for long context. 
-    5. softmax at the end of qwen3 model. is it required ?
-    6. Document every component ops, tensor, ...
-    7. Find solution for intermediate tensors 
+### Code Quality & Cleanup
+1. Correct parameter name formatting in matmul AVX (should be M, K, N order)
+2. Standardize function parameter order:
+   - Inputs first, then outputs
+   - Example: `bool parseString(const char* input, int start_pos, int length, char* output, int* output_length);`
+3. Organize CPU ops properly:
+   - Use namespaces based on implementation type (naive, AVX2, etc.)
+   - Prepare for future implementations
+4. Research scaling factor for rotary embedding (used for long context)
+5. Investigate if softmax at the end of Qwen3 model is required
+6. Document every component (ops, tensor, etc.)
+7. Find solution for intermediate tensor memory management
 
-### Performance : 
-    1. Use MatMul instead of Linear. lat diff ~1.5x
-    2. MLP block can optimised by doing MM gate, MM up and Silu at the same time.
-    3. write an mlp kernel directly instead. assert input numel() == embed_dim == output_dim
-    4. properly manage the prepare() calls in qwen3
-    5. memory optimisation
+### Performance Optimizations
+1. Use MatMul instead of Linear (latency difference ~1.5x)
+2. Optimize MLP block by fusing operations:
+   - Combine MM gate, MM up, and SiLU operations
+3. Write a dedicated MLP kernel:
+   - Assert `input.numel() == embed_dim == output_dim`
+4. Properly manage `prepare()` calls in Qwen3 model
+5. Memory optimization improvements
