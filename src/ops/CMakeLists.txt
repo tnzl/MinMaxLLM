@@ -3,8 +3,8 @@ add_library(ops STATIC
     ${CMAKE_SOURCE_DIR}/src/ops/matmul.cpp
     ${CMAKE_SOURCE_DIR}/src/ops/rotary_embedding.cpp
     ${CMAKE_SOURCE_DIR}/src/ops/gqa.cpp
-    ${CMAKE_SOURCE_DIR}/src/ops/silu_avx2.cpp
-    ${CMAKE_SOURCE_DIR}/src/ops/softmax_avx2.cpp
+    ${CMAKE_SOURCE_DIR}/src/ops/silu.cpp
+    ${CMAKE_SOURCE_DIR}/src/ops/softmax.cpp
     ${CMAKE_SOURCE_DIR}/src/ops/rmsnorm.cpp
     ${CMAKE_SOURCE_DIR}/src/ops/elemwise_mul.cpp
     ${CMAKE_SOURCE_DIR}/src/ops/elemwise_add.cpp

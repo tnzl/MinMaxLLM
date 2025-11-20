@@ -1,4 +1,4 @@
-#include "ops/silu_avx2.h"
+#include "ops/silu.h"
 #include <cassert>
 #include <cmath>
 #include <vector>
@@ -7,11 +7,6 @@
 #include <immintrin.h>
 #include <chrono>
 #include "../test_utils.cpp"
-
-// Reference SiLU implementation
-static float silu_ref(float x) {
-    return x / (1.0f + std::exp(-x));
-}
 
 int main() {
     constexpr size_t N = 1024;
@@ -25,7 +20,7 @@ int main() {
     long long ref_total_time = 0;
     for (int iter = 0; iter < num_iters; ++iter) {
         auto start = std::chrono::high_resolution_clock::now();
-        for (size_t i = 0; i < N; ++i) ref[i] = silu_ref(x[i]);
+        for (size_t i = 0; i < N; ++i) ref[i] = silu(x[i]);
         auto end = std::chrono::high_resolution_clock::now();
         ref_total_time += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     }

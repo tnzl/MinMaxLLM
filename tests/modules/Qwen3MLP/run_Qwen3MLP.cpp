@@ -1,6 +1,6 @@
 #include <tensor/safetensors.h>
 #include <ops/linear.h>
-#include <ops/silu_avx2.h>
+#include <ops/silu.h>
 #include <ops/elemwise_mul.h>
 #include <chrono>
 #include <iostream>

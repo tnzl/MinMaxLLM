@@ -7,7 +7,7 @@
 #include <ops/linear.h>
 #include <ops/rmsnorm.h>
 #include <ops/elemwise_add.h>
-#include <ops/silu_avx2.h>
+#include <ops/silu.h>
 #include <ops/elemwise_mul.h>
 #include <vector>
 

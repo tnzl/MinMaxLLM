@@ -1,5 +1,5 @@
 #include "ops/exp_avx2.h"
-#include "ops/silu_avx2.h"
+#include "ops/silu.h"
 #include <immintrin.h>
 #include <cmath>
 
@@ -35,3 +35,15 @@ void silu_avx2(const float* x, float* out, size_t n) {
         out[i] = xi / (1.0f + std::exp(-xi));
     }
 }
+
+// Naive reference SiLU implementation
+float silu(float x) {
+    return x / (1.0f + std::exp(-x));
+}
+
+void silu(const float* x, float* out, size_t n) {
+    for (size_t i = 0; i < n; ++i) {
+        out[i] = silu(x[i]);
+    }
+}
+
