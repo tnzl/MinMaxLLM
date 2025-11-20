@@ -1,5 +1,5 @@
 #include <ops/gqa.h>
-#include <ops/softmax_avx2.h>
+#include <ops/softmax.h>
 #include <tensor/tensor.h>
 #include <tensor/kvcache.h>
 
@@ -220,7 +220,7 @@ void optimized_gqa_forward(
         }
 
         // Phase 2: Apply softmax (using your optimized version)
-        softmax_avx2(attention_scores.data(), N);
+        softmax_avx2(attention_scores.data(), attention_scores.data(), N);
 
         // Phase 3: Compute weighted sum of values
         // Initialize output to zero

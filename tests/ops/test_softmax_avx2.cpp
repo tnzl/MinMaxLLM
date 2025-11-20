@@ -1,4 +1,4 @@
-#include "ops/softmax_avx2.h"
+#include "ops/softmax.h"
 #include <cassert>
 #include <cmath>
 #include <vector>
@@ -7,18 +7,6 @@
 #include <immintrin.h>
 #include <chrono>
 #include "../test_utils.cpp"
-
-// Reference softmax implementation
-static void softmax_ref(const float* input, float* output, size_t N) {
-    float max_val = input[0];
-    for (size_t i = 1; i < N; ++i) max_val = std::max(max_val, input[i]);
-    float sum = 0.0f;
-    for (size_t i = 0; i < N; ++i) {
-        output[i] = std::exp(input[i] - max_val);
-        sum += output[i];
-    }
-    for (size_t i = 0; i < N; ++i) output[i] /= sum;
-}
 
 int main() {
     constexpr size_t N = 151936;
@@ -29,14 +17,13 @@ int main() {
 
     // Reference timing
     auto start = std::chrono::high_resolution_clock::now();
-    softmax_ref(x.data(), ref.data(), N);
+    softmax_naive(x.data(), ref.data(), N);
     auto end = std::chrono::high_resolution_clock::now();
     auto ref_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
     // AVX2 timing
     start = std::chrono::high_resolution_clock::now();
-    std::copy(x.begin(), x.end(), out.begin());
-    softmax_avx2(out.data(), N);
+    softmax_avx2(x.data(), out.data(), N);
     end = std::chrono::high_resolution_clock::now();
     auto avx_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 

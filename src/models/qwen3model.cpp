@@ -4,7 +4,7 @@
 #include <ops/linear.h>
 #include <ops/rmsnorm.h>
 #include <ops/rotary_embedding.h>
-#include <ops/softmax_avx2.h>
+#include <ops/softmax.h>
 #include <tensor/kvcache.h>
 #include <tensor/safetensors.h>
 
@@ -268,6 +268,6 @@ void Qwen3Model::run_lm_head()
         logits_buffer_.data());
     
         //TODO : give option to set temperature
-    softmax_avx2(logits_buffer_.data(), config_.vocab_size);
+    softmax_avx2(logits_buffer_.data(), logits_buffer_.data(), config_.vocab_size);
 }
 
