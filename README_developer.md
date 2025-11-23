@@ -16,9 +16,6 @@
       - transposing weights at construction
       - calling matmul kernel during run
 
-
-
-
 ### Features
 1. Add AVX-optimized matmul for M=1
 2. Implement op classes architecture
@@ -65,3 +62,6 @@
 4. Properly manage `prepare()` calls in Qwen3 model
 5. Memory optimization improvements
 6. Create special kernel for our M=1 ,K,N 
+
+### Incorrect code
+1. Decoder is applying softmax
