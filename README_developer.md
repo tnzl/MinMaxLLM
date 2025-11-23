@@ -1,6 +1,7 @@
 ## Roadmap
 
 ### Top TODOs :
+-1. Why is model load super slow and ttft huge.
 0. Review py bind and run inference .py script properly
    - separate chat logic and model wrapping
    - properly name files and dirs i,e binding and qwn3 inference.
@@ -48,6 +49,7 @@
 7. Find solution for intermediate tensor memory management
 
 ### Performance Optimizations
+0. Re read model class properly. implementd but not properly. intent(i.e to prepare and run) if project not visible. 
 1. Use MatMul instead of Linear (latency difference ~1.5x)
    - we can map Linear ops with owned weights to matmul by : 
       - transposing weights at construction

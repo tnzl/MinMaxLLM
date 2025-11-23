@@ -7,13 +7,22 @@
 
 #include "../tensor/tensor.h"
 #include "../ops/rmsnorm.h"
+#include "model_base.h"
 
 class Safetensor;
 class KVCache;
 class Decoder;
 
-struct Qwen3Config
+/**
+ * @brief Configuration class for Qwen3 model architecture.
+ * 
+ * Each model architecture should have its own config class.
+ * Different model sizes (e.g., Qwen3-1.5B, Qwen3-7B) use
+ * different instances of this config with different values.
+ */
+class Qwen3Config
 {
+public:
     int hidden_size = 2048;
     int intermediate_size = 6144;
     int max_position_embeddings = 40960;
@@ -34,27 +43,33 @@ enum class TokenPhase
     Generation
 };
 
-class Qwen3Model
+class Qwen3Model : public ModelBase
 {
 public:
     explicit Qwen3Model(const Qwen3Config &config = Qwen3Config());
-    ~Qwen3Model();
+    ~Qwen3Model() override;
 
-    void load_weights(const std::string &safetensor_path, bool use_mmap = false);
+    // ModelBase interface
+    void load_weights(const std::string &safetensor_path, bool use_mmap = false) override;
 
-    void reset_cache();
+    void reset_cache() override;
 
-    void process_prompt_token(int token_id);
-    const std::vector<float> &predict_next_token(int token_id);
+    void process_prompt_token(int token_id) override;
+    const std::vector<float> &predict_next_token(int token_id) override;
 
+    std::size_t tokens_processed() const noexcept override { return tokens_processed_; }
+
+    // Qwen3Model-specific methods
     const Qwen3Config &config() const noexcept { return config_; }
-    std::size_t tokens_processed() const noexcept { return tokens_processed_; }
+
+protected:
+    // ModelBase protected interface
+    void ensure_weights_loaded() const override;
+    void ensure_cache_initialized() override;
+    void check_token_valid(int token_id) const override;
+    void ensure_position_capacity() const override;
 
 private:
-    void ensure_weights_loaded() const;
-    void ensure_cache_initialized();
-    void check_token_valid(int token_id) const;
-    void ensure_position_capacity() const;
 
     void embed_token(int token_id);
     void run_decoder_stack(std::size_t token_index);
