@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Interactive chat interface for Qwen3Model using the qwen3model bindings.
+Interactive chat interface using the InferenceEngine bindings.
 Supports conversational interactions with the model.
 """
 
@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 # Add the bindings directory and its subdirectories to Python path
-# This allows importing qwen3model regardless of where the script is run from
+# This allows importing inference_engine regardless of where the script is run from
 _script_dir = Path(__file__).parent.absolute()
 sys.path.insert(0, str(_script_dir))
 # Also check for build output directories
@@ -27,22 +27,22 @@ except ImportError:
     sys.exit(1)
 
 try:
-    import qwen3model
+    import inference_engine
 except ImportError as e:
-    print(f"Error: Failed to import qwen3model module: {e}")
-    print("Make sure the qwen3model.pyd (Windows) or qwen3model.so (Linux) is in the bindings/ directory")
+    print(f"Error: Failed to import inference_engine module: {e}")
+    print("Make sure the inference_engine.pyd (Windows) or inference_engine.so (Linux) is in the bindings/ directory")
     print("or in your Python path.")
     print(f"Checked paths: {sys.path[:5]}")
     sys.exit(1)
 
 
 class ChatInterface:
-    """Interactive chat interface for Qwen3Model."""
+    """Interactive chat interface for InferenceEngine."""
     
     def __init__(self, model, tokenizer, config, max_new_tokens=512):
         self.model = model
         self.tokenizer = tokenizer
-        self.config = config
+        self.config = config  # Qwen3Config for token IDs (bos_token_id, eos_token_id)
         self.max_new_tokens = max_new_tokens
         self.conversation_history = []
         self.processed_token_count = 0
@@ -311,7 +311,7 @@ class ChatInterface:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Interactive chat interface for Qwen3Model",
+        description="Interactive chat interface using InferenceEngine",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -323,6 +323,9 @@ Examples:
 
   # Disable memory mapping:
   python run_inference.py model.safetensors --tokenizer-path /path/to/model --no-mmap
+
+  # Specify model name:
+  python run_inference.py model.safetensors --tokenizer-path /path/to/model --model-name Qwen3-1.7B
         """
     )
     
@@ -336,6 +339,12 @@ Examples:
         type=str,
         required=True,
         help="Path to tokenizer (required for text input/output)"
+    )
+    parser.add_argument(
+        "--model-name",
+        type=str,
+        default="Qwen3-1.7B",
+        help="Model name (e.g., Qwen3-1.7B, default: Qwen3-1.7B)"
     )
     parser.add_argument(
         "--max-new-tokens",
@@ -430,12 +439,14 @@ Examples:
         sys.exit(1)
     
     # Create model config (using defaults, can be extended with command-line args if needed)
-    config = qwen3model.Qwen3Config()
+    # Config is needed for token IDs (bos_token_id, eos_token_id)
+    config = inference_engine.Qwen3Config()
     
     # Create and load model
-    print(f"\nLoading model from: {args.safetensors_path}")
+    print(f"\nCreating InferenceEngine for model: {args.model_name}")
+    print(f"Loading model from: {args.safetensors_path}")
     load_start = time.time()
-    model = qwen3model.Qwen3Model(config)
+    model = inference_engine.InferenceEngine(args.model_name)
     model.load_weights(args.safetensors_path, use_mmap=not args.no_mmap)
     load_time = time.time() - load_start
     print(f"Model loaded in {load_time:.3f} seconds\n")

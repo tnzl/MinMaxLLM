@@ -47,6 +47,7 @@
 5. Investigate if softmax at the end of Qwen3 model is required
 6. Document every component (ops, tensor, etc.)
 7. Find solution for intermediate tensor memory management
+8. Create a common op include file, ops.h s.
 
 ### Performance Optimizations
 0. Re read model class properly. implementd but not properly. intent(i.e to prepare and run) if project not visible. 
