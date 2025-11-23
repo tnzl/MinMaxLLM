@@ -8,7 +8,16 @@ for different model families.
 import sys
 import time
 from abc import ABC, abstractmethod
+from enum import IntEnum
 from typing import List, Dict, Tuple, Optional
+
+
+class VerbosityLevel(IntEnum):
+    """Verbosity levels for controlling output."""
+    ERROR = 0      # Only errors
+    WARNING = 1    # Errors and warnings
+    INFO = 2       # Errors, warnings, and info messages
+    DEBUG = 3      # All messages including debug details
 
 
 class ChatInterface(ABC):
@@ -19,7 +28,7 @@ class ChatInterface(ABC):
     with LLM models. Subclasses should implement model-specific behavior.
     """
     
-    def __init__(self, model, tokenizer, max_new_tokens: int = 512):
+    def __init__(self, model, tokenizer, max_new_tokens: int = 512, verbosity: VerbosityLevel = VerbosityLevel.INFO):
         """
         Initialize the chat interface.
         
@@ -27,10 +36,12 @@ class ChatInterface(ABC):
             model: The inference engine model instance
             tokenizer: The tokenizer instance (from transformers)
             max_new_tokens: Maximum number of tokens to generate per response
+            verbosity: Verbosity level for controlling output (default: INFO)
         """
         self.model = model
         self.tokenizer = tokenizer
         self.max_new_tokens = max_new_tokens
+        self.verbosity = verbosity
         self.conversation_history: List[Dict[str, str]] = []
         self.processed_token_count = 0
         self.generated_token_ids: List[int] = []
@@ -54,6 +65,30 @@ class ChatInterface(ABC):
             EOS token ID or None if not available
         """
         pass
+    
+    def _should_print(self, level: VerbosityLevel) -> bool:
+        """Check if a message at the given verbosity level should be printed."""
+        return self.verbosity >= level
+    
+    def _print_error(self, message: str, file=sys.stderr, **kwargs):
+        """Print an error message."""
+        if self._should_print(VerbosityLevel.ERROR):
+            print(f"[ERROR] {message}", file=file, **kwargs)
+    
+    def _print_warning(self, message: str, file=sys.stderr, **kwargs):
+        """Print a warning message."""
+        if self._should_print(VerbosityLevel.WARNING):
+            print(f"[WARNING] {message}", file=file, **kwargs)
+    
+    def _print_info(self, message: str, file=sys.stdout, **kwargs):
+        """Print an info message."""
+        if self._should_print(VerbosityLevel.INFO):
+            print(message, file=file, **kwargs)
+    
+    def _print_debug(self, message: str, file=sys.stderr, **kwargs):
+        """Print a debug message."""
+        if self._should_print(VerbosityLevel.DEBUG):
+            print(f"[DEBUG] {message}", file=file, **kwargs)
     
     def encode_conversation(self, add_generation_prompt: bool = True) -> List[int]:
         """
@@ -111,14 +146,14 @@ class ChatInterface(ABC):
         
         # Process only new tokens (those after what we've already processed)
         if self.processed_token_count >= len(input_tokens):
-            print(f"[WARNING] processed_token_count ({self.processed_token_count}) >= total tokens ({len(input_tokens)}), resetting to 0", file=sys.stderr)
+            self._print_warning(f"processed_token_count ({self.processed_token_count}) >= total tokens ({len(input_tokens)}), resetting to 0")
             self.processed_token_count = 0
         
         new_tokens = input_tokens[self.processed_token_count:]
         num_new_tokens = len(new_tokens)
         
         # Debug: Log token counts
-        print(f"[DEBUG] processed_token_count={self.processed_token_count}, total_input_tokens={len(input_tokens)}, new_tokens={num_new_tokens}", file=sys.stderr)
+        self._print_debug(f"processed_token_count={self.processed_token_count}, total_input_tokens={len(input_tokens)}, new_tokens={num_new_tokens}")
         
         # Process all but the last new token as prompt tokens
         prompt_start = time.time()
@@ -129,14 +164,14 @@ class ChatInterface(ABC):
             token_time = time.time() - token_start
             token_times.append(token_time)
             if i < 3:
-                print(f"[DEBUG] Prompt token {i}: {token_time*1000:.2f} ms", file=sys.stderr)
+                self._print_debug(f"Prompt token {i}: {token_time*1000:.2f} ms")
         prompt_time = time.time() - prompt_start
         
         # Update processed token count
         num_prompt_tokens_processed = len(new_tokens) - 1 if new_tokens else 0
         self.processed_token_count = len(input_tokens) - 1
         
-        print(f"[DEBUG] After prompt processing: processed {num_prompt_tokens_processed} new prompt tokens, processed_token_count={self.processed_token_count}", file=sys.stderr)
+        self._print_debug(f"After prompt processing: processed {num_prompt_tokens_processed} new prompt tokens, processed_token_count={self.processed_token_count}")
         
         # Generate response starting from the last token
         if not new_tokens:
@@ -172,6 +207,7 @@ class ChatInterface(ABC):
             # Decode and print token immediately (streaming)
             token_text = self.tokenizer.decode([next_token], skip_special_tokens=True)
             generated_text_parts.append(token_text)
+            # Always print generated tokens (streaming output) regardless of verbosity
             print(token_text, end="", flush=True)
             
             # Check for EOS token
@@ -217,21 +253,28 @@ class ChatInterface(ABC):
         self.conversation_history = []
         self.processed_token_count = 0
         self.generated_token_ids = []
-        print("Conversation reset.")
+        self._print_info("Conversation reset.")
     
     def chat_loop(self) -> None:
         """Main interactive chat loop."""
-        print("\n" + "="*60)
-        print("Interactive Chat Interface")
-        print("="*60)
-        print("Type your messages and press Enter to get a response.")
-        print("Commands:")
-        print("  /reset  - Reset the conversation")
-        print("  /quit   - Exit the chat")
-        print("="*60 + "\n")
+        # Ensure clean output before starting
+        sys.stdout.flush()
+        sys.stderr.flush()
+        
+        self._print_info("\n" + "="*60)
+        self._print_info("Interactive Chat Interface")
+        self._print_info("="*60)
+        self._print_info("Type your messages and press Enter to get a response.")
+        self._print_info("Commands:")
+        self._print_info("  /reset  - Reset the conversation")
+        self._print_info("  /quit   - Exit the chat")
+        self._print_info("="*60 + "\n")
         
         while True:
             try:
+                # Ensure clean line before input prompt
+                sys.stdout.flush()
+                sys.stderr.flush()
                 # Get user input
                 user_input = input("You: ").strip()
                 
@@ -240,47 +283,53 @@ class ChatInterface(ABC):
                 
                 # Handle commands
                 if user_input.lower() == "/quit":
-                    print("Goodbye!")
+                    self._print_info("Goodbye!")
                     break
                 elif user_input.lower() == "/reset":
                     self.reset()
                     continue
                 
                 # Generate response
-                print("Assistant: ", end="", flush=True)
+                self._print_info("Assistant: ", end="", flush=True)
                 response, timing = self.process_and_generate(user_input)
                 
-                # Print detailed timing breakdown
-                print("\n" + "-" * 60)
-                print("Timing Breakdown:")
-                print(f"  Encoding time:     {timing['encode_time']*1000:.2f} ms")
-                if timing['num_prompt_tokens'] > 0:
-                    avg_prompt_time = timing['prompt_time'] / timing['num_prompt_tokens']
-                    print(f"  Prompt processing: {timing['prompt_time']*1000:.2f} ms ({timing['num_prompt_tokens']} tokens, {avg_prompt_time*1000:.2f} ms/token)")
-                    if timing.get('token_times') and len(timing['token_times']) > 0:
-                        first_token_time = timing['token_times'][0] * 1000
-                        if len(timing['token_times']) > 1:
-                            avg_rest = sum(timing['token_times'][1:]) / (len(timing['token_times']) - 1) * 1000
-                            print(f"    - First token:   {first_token_time:.2f} ms (may include initialization)")
-                            print(f"    - Rest avg:      {avg_rest:.2f} ms/token")
-                else:
-                    print(f"  Prompt processing: {timing['prompt_time']*1000:.2f} ms (0 tokens)")
-                print(f"  Token generation:  {timing['generation_time']*1000:.2f} ms ({timing['num_generated']} tokens)")
-                print(f"  Time to first token: {timing['first_token_time']*1000:.2f} ms")
-                if timing['num_generated'] > 0:
-                    print(f"  Avg per token:     {timing['generation_time']/timing['num_generated']*1000:.2f} ms/token")
-                print(f"  Total time:        {(timing['encode_time'] + timing['prompt_time'] + timing['generation_time'])*1000:.2f} ms")
-                print("-" * 60 + "\n")
+                # Ensure response ends with newline for clean output
+                if response and not response.endswith('\n'):
+                    print()  # Add newline after response
+                
+                # Print detailed timing breakdown (INFO level)
+                if self._should_print(VerbosityLevel.INFO):
+                    print("\n" + "-" * 60)
+                    print("Timing Breakdown:")
+                    print(f"  Encoding time:     {timing['encode_time']*1000:.2f} ms")
+                    if timing['num_prompt_tokens'] > 0:
+                        avg_prompt_time = timing['prompt_time'] / timing['num_prompt_tokens']
+                        print(f"  Prompt processing: {timing['prompt_time']*1000:.2f} ms ({timing['num_prompt_tokens']} tokens, {avg_prompt_time*1000:.2f} ms/token)")
+                        if timing.get('token_times') and len(timing['token_times']) > 0:
+                            first_token_time = timing['token_times'][0] * 1000
+                            if len(timing['token_times']) > 1:
+                                avg_rest = sum(timing['token_times'][1:]) / (len(timing['token_times']) - 1) * 1000
+                                print(f"    - First token:   {first_token_time:.2f} ms (may include initialization)")
+                                print(f"    - Rest avg:      {avg_rest:.2f} ms/token")
+                    else:
+                        print(f"  Prompt processing: {timing['prompt_time']*1000:.2f} ms (0 tokens)")
+                    print(f"  Token generation:  {timing['generation_time']*1000:.2f} ms ({timing['num_generated']} tokens)")
+                    print(f"  Time to first token: {timing['first_token_time']*1000:.2f} ms")
+                    if timing['num_generated'] > 0:
+                        print(f"  Avg per token:     {timing['generation_time']/timing['num_generated']*1000:.2f} ms/token")
+                    print(f"  Total time:        {(timing['encode_time'] + timing['prompt_time'] + timing['generation_time'])*1000:.2f} ms")
+                    print("-" * 60 + "\n")
                 
             except KeyboardInterrupt:
-                print("\n\nInterrupted. Type /quit to exit or continue chatting.")
+                self._print_info("\n\nInterrupted. Type /quit to exit or continue chatting.")
             except EOFError:
-                print("\nGoodbye!")
+                self._print_info("\nGoodbye!")
                 break
             except Exception as e:
-                print(f"\nError: {e}\n")
-                import traceback
-                traceback.print_exc()
+                self._print_error(f"\nError: {e}\n")
+                if self._should_print(VerbosityLevel.DEBUG):
+                    import traceback
+                    traceback.print_exc()
 
 
 class Qwen3ChatInterface(ChatInterface):
@@ -290,7 +339,7 @@ class Qwen3ChatInterface(ChatInterface):
     This class provides Qwen3-specific token ID handling and chat formatting.
     """
     
-    def __init__(self, model, tokenizer, max_new_tokens: int = 512):
+    def __init__(self, model, tokenizer, max_new_tokens: int = 512, verbosity: VerbosityLevel = VerbosityLevel.INFO):
         """
         Initialize Qwen3 chat interface.
         
@@ -298,8 +347,9 @@ class Qwen3ChatInterface(ChatInterface):
             model: The InferenceEngine model instance
             tokenizer: The tokenizer instance (from transformers)
             max_new_tokens: Maximum number of tokens to generate per response
+            verbosity: Verbosity level for controlling output (default: INFO)
         """
-        super().__init__(model, tokenizer, max_new_tokens)
+        super().__init__(model, tokenizer, max_new_tokens, verbosity)
         # Cache token IDs from tokenizer
         self._bos_token_id = self._get_token_id_from_tokenizer('bos_token_id')
         self._eos_token_id = self._get_token_id_from_tokenizer('eos_token_id')

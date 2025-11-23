@@ -20,6 +20,7 @@ except ImportError:
 try:
     from llm_inference import InferenceEngine
     from llm_inference import Qwen3ChatInterface
+    from llm_inference.chat_interface import VerbosityLevel
 except ImportError as e:
     print(f"Error: Failed to import llm_inference package: {e}")
     print("Make sure the package is built and available in the Python path.")
@@ -76,44 +77,64 @@ Examples:
         action="store_true",
         help="Disable memory mapping (default: use mmap)"
     )
+    parser.add_argument(
+        "--verbosity",
+        type=str,
+        choices=["error", "warning", "info", "debug"],
+        default="info",
+        help="Verbosity level: error (only errors), warning (errors+warnings), info (errors+warnings+info), debug (all messages). Default: info"
+    )
     
     args = parser.parse_args()
     
+    # Convert verbosity string to VerbosityLevel enum
+    verbosity_map = {
+        "error": VerbosityLevel.ERROR,
+        "warning": VerbosityLevel.WARNING,
+        "info": VerbosityLevel.INFO,
+        "debug": VerbosityLevel.DEBUG
+    }
+    verbosity = verbosity_map[args.verbosity.lower()]
+    
     # Check if safetensors file exists
     if not os.path.exists(args.safetensors_path):
-        print(f"Error: Safetensors file not found: {args.safetensors_path}")
+        print(f"Error: Safetensors file not found: {args.safetensors_path}", file=sys.stderr)
         sys.exit(1)
     
     # Check if tokenizer path exists
     if not os.path.exists(args.tokenizer_path):
-        print(f"Error: Tokenizer path not found: {args.tokenizer_path}")
+        print(f"Error: Tokenizer path not found: {args.tokenizer_path}", file=sys.stderr)
         sys.exit(1)
     
     # Load tokenizer
     try:
         from transformers import AutoTokenizer
-        print(f"Loading tokenizer from: {args.tokenizer_path}")
+        if verbosity >= VerbosityLevel.INFO:
+            print(f"Loading tokenizer from: {args.tokenizer_path}")
         tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path)
-        print("Tokenizer loaded successfully.")
+        if verbosity >= VerbosityLevel.INFO:
+            print("Tokenizer loaded successfully.")
     except ImportError:
-        print("Error: transformers library is required.")
-        print("Install with: pip install transformers")
+        print("Error: transformers library is required.", file=sys.stderr)
+        print("Install with: pip install transformers", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
-        print(f"Error loading tokenizer: {e}")
+        print(f"Error loading tokenizer: {e}", file=sys.stderr)
         sys.exit(1)
     
     # Create and load model (config is managed internally by the model)
-    print(f"\nCreating InferenceEngine for model: {args.model_name}")
-    print(f"Loading model from: {args.safetensors_path}")
+    if verbosity >= VerbosityLevel.INFO:
+        print(f"\nCreating InferenceEngine for model: {args.model_name}")
+        print(f"Loading model from: {args.safetensors_path}")
     load_start = time.time()
     model = InferenceEngine(args.model_name)
     model.load_weights(args.safetensors_path, use_mmap=not args.no_mmap)
     load_time = time.time() - load_start
-    print(f"Model loaded in {load_time:.3f} seconds\n")
+    if verbosity >= VerbosityLevel.INFO:
+        print(f"Model loaded in {load_time:.3f} seconds\n")
     
     # Create Qwen3 chat interface and start interactive loop
-    chat = Qwen3ChatInterface(model, tokenizer, max_new_tokens=args.max_new_tokens)
+    chat = Qwen3ChatInterface(model, tokenizer, max_new_tokens=args.max_new_tokens, verbosity=verbosity)
     chat.chat_loop()
 
 

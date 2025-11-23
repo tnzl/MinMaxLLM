@@ -10,12 +10,13 @@ __version__ = "0.1.0"
 # Import the Python wrapper (which handles the C++ extension import)
 try:
     from .inference_engine import InferenceEngine
-    from .chat_interface import ChatInterface, Qwen3ChatInterface
+    from .chat_interface import ChatInterface, Qwen3ChatInterface, VerbosityLevel
     
     __all__ = [
         'InferenceEngine',
         'ChatInterface',
         'Qwen3ChatInterface',
+        'VerbosityLevel',
     ]
 except ImportError as e:
     import warnings
