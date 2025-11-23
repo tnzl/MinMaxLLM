@@ -1,11 +1,22 @@
-## Getting Started
-
-### Build Steps
-1. Install Visual Studio 2022 (Community Edition) or later
-2. Run `build.ps1`
-3. Run the application from the `build` folder
-
 ## Roadmap
+
+### Top TODOs :
+0. Review py bind and run inference .py script properly
+   - separate chat logic and model wrapping
+   - properly name files and dirs i,e binding and qwn3 inference.
+1. Create op class for all the ops 
+2. MLP optimisation :
+   - create an mlp op
+   - we can fuse gate MM and up MM. 
+      Do this by transposing and merging into a single weight during construction.
+   - transpose down proj wt and use matmul instead
+3. Use MatMul instead of Linear (latency difference ~1.5x)
+   - we can map Linear ops with owned weights to matmul by : 
+      - transposing weights at construction
+      - calling matmul kernel during run
+
+
+
 
 ### Features
 1. Add AVX-optimized matmul for M=1
@@ -21,6 +32,7 @@
 8. Migrate build system from Visual Studio to Ninja
    - Use VS Code for debugging
    - Create a starter's guide for this setup
+9. Enable all the qwen3 models of different sizes 
 
 ### Code Quality & Cleanup
 1. Correct parameter name formatting in matmul AVX (should be M, K, N order)
@@ -37,9 +49,16 @@
 
 ### Performance Optimizations
 1. Use MatMul instead of Linear (latency difference ~1.5x)
-2. Optimize MLP block by fusing operations:
-   - Combine MM gate, MM up, and SiLU operations
-3. Write a dedicated MLP kernel:
+   - we can map Linear ops with owned weights to matmul by : 
+      - transposing weights at construction
+      - calling matmul kernel during run
+2. MLP optimisation :
+   - create a kernel and preprocess weight at the time of construction
+   - create an mlp op
+   - we can fuse gate MM and up MM. 
+      Do this by transposing and merging into a single weight during construction.
+   - transpose down proj wt and use matmul instead
    - Assert `input.numel() == embed_dim == output_dim`
 4. Properly manage `prepare()` calls in Qwen3 model
 5. Memory optimization improvements
+6. Create special kernel for our M=1 ,K,N 
