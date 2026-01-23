@@ -6,12 +6,12 @@ MinMaxLLM is a production-ready, CPU-optimized inference engine designed to run 
 
 ## Key Features
 
-- ** AVX2-Optimized Operations**: Leverages Intel AVX2 SIMD instructions for 8x parallel processing of matrix operations, attention mechanisms, and normalization layers
-- ** Memory-Efficient**: Memory-mapped I/O for instant model loading without full RAM consumption
-- ** Python-First API**: Zero-copy NumPy integration with intuitive Python interface, while computation runs in optimized C++
-- ** Production-Ready Architecture**: Modular operator-based design with comprehensive test coverage
-- ** Zero GPU Dependency**: Run state-of-the-art LLMs entirely on CPU hardware
-- ** Streaming Generation**: Real-time token streaming with detailed performance metrics
+-  **AVX2-Optimized Operations**: Leverages Intel AVX2 SIMD instructions for 8x parallel processing of matrix operations, attention mechanisms, and normalization layers
+-  **Memory-Efficient**: Memory-mapped I/O for instant model loading without full RAM consumption
+-  **Python-First API**: Zero-copy NumPy integration with intuitive Python interface, while computation runs in optimized C++
+-  **Production-Ready Architecture**: Modular operator-based design with comprehensive test coverage
+-  **Zero GPU Dependency**: Run state-of-the-art LLMs entirely on CPU hardware
+-  **Streaming Generation**: Real-time token streaming with detailed performance metrics
 
 ## Architecture
 
@@ -108,7 +108,7 @@ sequenceDiagram
 4. **Efficient KV Cache**: Custom contiguous memory layout optimized for Grouped Query Attention (GQA)
 5. **Zero-Copy Python Integration**: NumPy arrays share memory with C++ tensors, eliminating data duplication
 
-## 📦 Supported Operations
+## Supported Operations
 
 ### Core Transformer Operations
 
@@ -126,7 +126,7 @@ sequenceDiagram
 - **OpenMP Parallelization**: Multi-threaded execution for attention heads and batch operations
 - **Optimized Memory Layout**: Contiguous KV cache storage for cache-friendly access patterns
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
