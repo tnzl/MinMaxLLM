@@ -4,16 +4,16 @@
 
 MinMaxLLM is a production-ready, CPU-optimized inference engine designed to run large language models efficiently on standard hardware. Built with C++ for maximum performance and Python for ease of use, it delivers GPU-quality inference on CPUs through advanced SIMD optimizations and memory-efficient design.
 
-## 🚀 Key Features
+## Key Features
 
-- **⚡ AVX2-Optimized Operations**: Leverages Intel AVX2 SIMD instructions for 8x parallel processing of matrix operations, attention mechanisms, and normalization layers
-- **💾 Memory-Efficient**: Memory-mapped I/O for instant model loading without full RAM consumption
-- **🐍 Python-First API**: Zero-copy NumPy integration with intuitive Python interface, while computation runs in optimized C++
-- **🔧 Production-Ready Architecture**: Modular operator-based design with comprehensive test coverage
-- **🎯 Zero GPU Dependency**: Run state-of-the-art LLMs entirely on CPU hardware
-- **📊 Streaming Generation**: Real-time token streaming with detailed performance metrics
+- ** AVX2-Optimized Operations**: Leverages Intel AVX2 SIMD instructions for 8x parallel processing of matrix operations, attention mechanisms, and normalization layers
+- ** Memory-Efficient**: Memory-mapped I/O for instant model loading without full RAM consumption
+- ** Python-First API**: Zero-copy NumPy integration with intuitive Python interface, while computation runs in optimized C++
+- ** Production-Ready Architecture**: Modular operator-based design with comprehensive test coverage
+- ** Zero GPU Dependency**: Run state-of-the-art LLMs entirely on CPU hardware
+- ** Streaming Generation**: Real-time token streaming with detailed performance metrics
 
-## 🏗️ Architecture
+## Architecture
 
 MinMaxLLM follows a clean, modular architecture that separates concerns and enables easy extension:
 
@@ -212,7 +212,7 @@ next_token = int(np.argmax(logits))
 print(f"Predicted token: {next_token}")
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 MinMaxLLM/
@@ -253,9 +253,9 @@ MinMaxLLM/
 └── requirements.txt       # Python dependencies
 ```
 
-## 🎯 Current Status
+## Current Status
 
-### ✅ Implemented Features
+### Implemented Features
 
 - Full Qwen3 model support (1.7B and other sizes)
 - Complete transformer operator stack
@@ -267,7 +267,7 @@ MinMaxLLM/
 - KV cache management
 - Prefetch manager for cache optimization
 
-### 🚧 Roadmap
+### Roadmap
 
 Based on our development roadmap, upcoming features include:
 
@@ -282,7 +282,7 @@ Based on our development roadmap, upcoming features include:
 
 See [README_developer.md](README_developer.md) for detailed technical roadmap and TODOs.
 
-## 🔬 Performance Characteristics
+## Performance Characteristics
 
 MinMaxLLM is optimized for CPU inference with the following characteristics:
 
@@ -301,7 +301,7 @@ MinMaxLLM is optimized for CPU inference with the following characteristics:
 
 Performance varies by model size, hardware, and sequence length. For best results, use CPUs with AVX2 support and sufficient cache.
 
-## 🧪 Testing
+## Testing
 
 The project includes comprehensive tests for all components:
 
@@ -319,7 +319,7 @@ Test coverage includes:
 - Safetensors loading
 - End-to-end model inference
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Areas of particular interest:
 
@@ -331,11 +331,7 @@ Contributions are welcome! Areas of particular interest:
 
 Please ensure all tests pass and follow the existing code style.
 
-## 📄 License
-
-[Add license information here]
-
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Built with [pybind11](https://github.com/pybind/pybind11) for Python integration
 - Uses [safetensors](https://github.com/huggingface/safetensors) format for model weights
